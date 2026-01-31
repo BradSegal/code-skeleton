@@ -1,6 +1,6 @@
 # anatomize
 
-[![CI](https://github.com/BradSegal/code-skeleton/actions/workflows/ci.yml/badge.svg)](https://github.com/BradSegal/code-skeleton/actions/workflows/ci.yml)
+[![CI](https://github.com/BradSegal/anatomize/actions/workflows/ci.yml/badge.svg)](https://github.com/BradSegal/anatomize/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 

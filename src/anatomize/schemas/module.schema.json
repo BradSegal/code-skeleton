@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/BradSegal/code-skeleton/schemas/module.schema.json",
+  "$id": "https://github.com/BradSegal/anatomize/schemas/module.schema.json",
   "title": "Anatomize Module",
   "description": "Schema for anatomize module files",
   "type": "object",

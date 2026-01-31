@@ -51,9 +51,9 @@ dev = [
 anatomize = "anatomize.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/BradSegal/code-skeleton"
-Documentation = "https://github.com/BradSegal/code-skeleton#readme"
-Repository = "https://github.com/BradSegal/code-skeleton"
+Homepage = "https://github.com/BradSegal/anatomize"
+Documentation = "https://github.com/BradSegal/anatomize#readme"
+Repository = "https://github.com/BradSegal/anatomize"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/anatomize"]

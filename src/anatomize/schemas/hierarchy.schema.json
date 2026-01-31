@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/BradSegal/code-skeleton/schemas/hierarchy.schema.json",
+  "$id": "https://github.com/BradSegal/anatomize/schemas/hierarchy.schema.json",
   "title": "Anatomize Hierarchy",
   "description": "Schema for anatomize hierarchy files",
   "type": "object",
