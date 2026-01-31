@@ -1,4 +1,4 @@
-# Guide: code-skeleton
+# Guide: anatomize
 
 This guide describes the concepts, tools, and patterns in this repository and how to use them effectively.
 
@@ -6,7 +6,7 @@ This guide describes the concepts, tools, and patterns in this repository and ho
 
 ## What this tool is for
 
-`code-skeleton` is built for two related jobs:
+`anatomize` is built for two related jobs:
 
 1) **Skeletons (code maps)**: small, structured representations of a Python codebase (packages/modules/classes/functions/signatures) for fast navigation and architecture review.
 2) **Packs (review bundles)**: deterministic single-file (or split) bundles of repository contents for external review, optimized for token budgets.
@@ -69,7 +69,7 @@ Key options:
 
 Examples:
 ```bash
-code-skeleton generate ./src --output .skeleton --level signatures --format yaml --format json
+anatomize generate ./src --output .skeleton --level signatures --format yaml --format json
 ```
 
 ### `estimate`
@@ -77,7 +77,7 @@ Computes the same skeleton but prints a token estimate and summary.
 
 Example:
 ```bash
-code-skeleton estimate ./src --level modules
+anatomize estimate ./src --level modules
 ```
 
 ### `validate`
@@ -88,8 +88,8 @@ Regenerates expected output in a temp directory and compares to an existing skel
 
 Example:
 ```bash
-code-skeleton validate .skeleton --source ./src
-code-skeleton validate .skeleton --source ./src --fix
+anatomize validate .skeleton --source ./src
+anatomize validate .skeleton --source ./src --fix
 ```
 
 ---
@@ -189,7 +189,7 @@ Selects the transitive closure of **local Python imports** from entry files.
 
 Example:
 ```bash
-code-skeleton pack . --entry src/app.py --deps --output app-slice.md
+anatomize pack . --entry src/app.py --deps --output app-slice.md
 ```
 
 Strictness: if your ignore/include filters exclude any file required by the closure, `pack` fails with an actionable error.
@@ -199,12 +199,12 @@ Selects a Python module and **all local Python modules that import it**, transit
 
 Example:
 ```bash
-code-skeleton pack . --target src/pkg/core.py --reverse-deps --output importers.md
+anatomize pack . --target src/pkg/core.py --reverse-deps --output importers.md
 ```
 
 Combine with forward deps to include “importers + everything they import”:
 ```bash
-code-skeleton pack . --target src/pkg/core.py --reverse-deps --deps --output slice.md
+anatomize pack . --target src/pkg/core.py --reverse-deps --deps --output slice.md
 ```
 
 #### 3) Reference-based usage slicing (Pyright): `--uses --slice-backend pyright`
@@ -212,7 +212,7 @@ This selects files that reference symbols in the target module, using Pyright’
 
 Example:
 ```bash
-code-skeleton pack . --target src/pkg/core.py --uses --slice-backend pyright --output uses.md
+anatomize pack . --target src/pkg/core.py --uses --slice-backend pyright --output uses.md
 ```
 
 Notes:
@@ -226,8 +226,8 @@ To keep bundles bounded and CI-friendly:
 
 Examples:
 ```bash
-code-skeleton pack . --split-output 500kb --output codebase.md
-code-skeleton pack . --max-output 20_000t --output codebase.md
+anatomize pack . --split-output 500kb --output codebase.md
+anatomize pack . --max-output 20_000t --output codebase.md
 ```
 
 ### Performance (`--workers`)
@@ -239,19 +239,19 @@ code-skeleton pack . --max-output 20_000t --output codebase.md
 ## Python API details
 
 ### Skeleton generation
-- `code_skeleton.generators.main.SkeletonGenerator`: orchestrates discovery and extraction.
-- `code_skeleton.core.discovery.discover`: finds modules/packages under roots.
-- `code_skeleton.core.extractor.SymbolExtractor`: tree-sitter extraction (strict parsing).
-- `code_skeleton.formats.write_skeleton`: writes outputs + schemas + manifest.
-- `code_skeleton.validation.validate_skeleton_dir`: strict validation + optional fix.
+- `anatomize.generators.main.SkeletonGenerator`: orchestrates discovery and extraction.
+- `anatomize.core.discovery.discover`: finds modules/packages under roots.
+- `anatomize.core.extractor.SymbolExtractor`: tree-sitter extraction (strict parsing).
+- `anatomize.formats.write_skeleton`: writes outputs + schemas + manifest.
+- `anatomize.validation.validate_skeleton_dir`: strict validation + optional fix.
 
 ### Pack API
-- `code_skeleton.pack.runner.pack`: high-level pack API used by the CLI.
-- `code_skeleton.pack.deps`:
+- `anatomize.pack.runner.pack`: high-level pack API used by the CLI.
+- `anatomize.pack.deps`:
   - forward closure: `dependency_closure(...)`
   - reverse closure: `reverse_dependency_closure(...)`
-- `code_skeleton.pack.formats`: output rendering (markdown/plain/json/xml) + markdown safety.
-- `code_skeleton.pack.pyright_lsp`: minimal LSP client (stdio) for Pyright usage slicing.
+- `anatomize.pack.formats`: output rendering (markdown/plain/json/xml) + markdown safety.
+- `anatomize.pack.pyright_lsp`: minimal LSP client (stdio) for Pyright usage slicing.
 
 ---
 

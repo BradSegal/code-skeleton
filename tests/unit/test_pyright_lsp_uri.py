@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.pack.pyright_lsp import _uri_to_path
+from anatomize.pack.pyright_lsp import _uri_to_path
 
 pytestmark = pytest.mark.unit
 
@@ -22,4 +22,3 @@ def test_uri_to_path_accepts_localhost() -> None:
     p = _uri_to_path("file://localhost/tmp/x.py")
     assert p is not None
     assert p == Path("/tmp/x.py").resolve()
-

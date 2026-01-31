@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.core.policy import SymlinkPolicy
-from code_skeleton.pack.formats import ContentEncoding, PackFormat
-from code_skeleton.pack.limit import parse_output_limit
-from code_skeleton.pack.mode import PackMode
-from code_skeleton.pack.runner import pack
-from code_skeleton.pack.summaries import SummaryConfig
+from anatomize.core.policy import SymlinkPolicy
+from anatomize.pack.formats import ContentEncoding, PackFormat
+from anatomize.pack.limit import parse_output_limit
+from anatomize.pack.mode import PackMode
+from anatomize.pack.runner import pack
+from anatomize.pack.summaries import SummaryConfig
 
 pytestmark = pytest.mark.unit
 
@@ -229,4 +229,3 @@ def test_pack_hybrid_fit_to_max_output_downgrades_summaries(tmp_path: Path) -> N
     files = [r for r in rows if r["type"] == "file"]
     downgraded = [r for r in files if r["representation"] == "meta"]
     assert downgraded
-

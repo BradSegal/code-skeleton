@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.core.policy import SymlinkPolicy
-from code_skeleton.core.types import ResolutionLevel
-from code_skeleton.generators.main import SkeletonGenerator
+from anatomize.core.policy import SymlinkPolicy
+from anatomize.core.types import ResolutionLevel
+from anatomize.generators.main import SkeletonGenerator
 
 pytestmark = pytest.mark.unit
 

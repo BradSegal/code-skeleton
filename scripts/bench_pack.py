@@ -4,13 +4,13 @@ import argparse
 import time
 from pathlib import Path
 
-from code_skeleton.core.policy import SymlinkPolicy
-from code_skeleton.pack.formats import ContentEncoding, PackFormat
-from code_skeleton.pack.runner import pack
+from anatomize.core.policy import SymlinkPolicy
+from anatomize.pack.formats import ContentEncoding, PackFormat
+from anatomize.pack.runner import pack
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Benchmark code-skeleton pack locally.")
+    parser = argparse.ArgumentParser(description="Benchmark anatomize pack locally.")
     parser.add_argument("root", nargs="?", default=".", help="Repo root")
     parser.add_argument("--compress", action="store_true")
     parser.add_argument("--format", default="markdown", choices=[f.value for f in PackFormat])

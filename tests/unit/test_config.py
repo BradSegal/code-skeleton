@@ -3,16 +3,16 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from code_skeleton.config import SkeletonConfig
-from code_skeleton.core.types import ResolutionLevel
-from code_skeleton.formats import OutputFormat
-from code_skeleton.pack.formats import PackFormat
+from anatomize.config import SkeletonConfig
+from anatomize.core.types import ResolutionLevel
+from anatomize.formats import OutputFormat
+from anatomize.pack.formats import PackFormat
 
 pytestmark = pytest.mark.unit
 
 
 def test_config_strict_unknown_keys(tmp_path: Path) -> None:
-    cfg = tmp_path / ".code-skeleton.yaml"
+    cfg = tmp_path / ".anatomize.yaml"
     cfg.write_text(
         "sources: [src]\noutput: .skeleton\nunknown_key: 1\n",
         encoding="utf-8",
@@ -25,7 +25,7 @@ def test_config_find_in_parent_dir(tmp_path: Path) -> None:
     parent = tmp_path / "parent"
     child = parent / "child"
     child.mkdir(parents=True)
-    cfg = parent / ".code-skeleton.yaml"
+    cfg = parent / ".anatomize.yaml"
     cfg.write_text(
         (
             "sources: [src]\n"
@@ -50,7 +50,7 @@ def test_config_find_in_parent_dir(tmp_path: Path) -> None:
 
 
 def test_config_pack_section_parses_and_is_strict(tmp_path: Path) -> None:
-    cfg = tmp_path / ".code-skeleton.yaml"
+    cfg = tmp_path / ".anatomize.yaml"
     cfg.write_text(
         (
             "sources: [src]\n"
@@ -67,14 +67,14 @@ def test_config_pack_section_parses_and_is_strict(tmp_path: Path) -> None:
     assert loaded.pack.output == "out.json"
     assert loaded.pack.ignore == ["*.pyc"]
 
-    cfg2 = tmp_path / ".code-skeleton2.yaml"
+    cfg2 = tmp_path / ".anatomize2.yaml"
     cfg2.write_text("pack:\n  unknown: 1\n", encoding="utf-8")
     with pytest.raises(ValidationError):
         SkeletonConfig.from_file(cfg2)
 
 
 def test_config_pack_output_extension_must_match_format(tmp_path: Path) -> None:
-    cfg = tmp_path / ".code-skeleton.yaml"
+    cfg = tmp_path / ".anatomize.yaml"
     cfg.write_text(
         (
             "pack:\n"

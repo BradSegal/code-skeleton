@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "code-skeleton"
-description = "Generate token-efficient codebase structure maps for AI agents"
+name = "anatomize"
+description = "Deterministic, token-efficient codebase packs and skeleton maps for AI review (Python)"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ dynamic = ["version"]
 authors = [
     { name = "Bradley Max Segal", email = "bradleymaxsegal@gmail.com" }
 ]
-keywords = ["ast", "code-analysis", "llm", "ai", "tree-sitter", "skeleton"]
+keywords = ["ast", "code-analysis", "llm", "ai", "tree-sitter", "skeleton", "pack", "bundle"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -48,7 +48,7 @@ dev = [
 ]
 
 [project.scripts]
-code-skeleton = "code_skeleton.cli:app"
+anatomize = "anatomize.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/BradSegal/code-skeleton"
@@ -56,10 +56,10 @@ Documentation = "https://github.com/BradSegal/code-skeleton#readme"
 Repository = "https://github.com/BradSegal/code-skeleton"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/code_skeleton"]
+packages = ["src/anatomize"]
 
 [tool.hatch.version]
-path = "src/code_skeleton/version.py"
+path = "src/anatomize/version.py"
 
 [tool.black]
 line-length = 119

@@ -1,7 +1,7 @@
-# Skill: code packing & extraction (code-skeleton)
+# Skill: code packing & extraction (anatomize)
 
 ## Purpose
-Use `code-skeleton` to extract a repository (or a slice of it) into **deterministic, token-efficient artifacts** suitable for external review by an AI model or a human.
+Use `anatomize` to extract a repository (or a slice of it) into **deterministic, token-efficient artifacts** suitable for external review by an AI model or a human.
 
 This skill is about *using the tool*, not modifying it.
 
@@ -25,38 +25,38 @@ Use this skill when you need to:
 
 ### 1) Full bundle (repomix-style)
 ```bash
-code-skeleton pack . --output codebase.md
+anatomize pack . --output codebase.md
 ```
 
 Add stable line numbers (useful for review comments that reference exact lines):
 ```bash
-code-skeleton pack . --output codebase.md --line-numbers
+anatomize pack . --output codebase.md --line-numbers
 ```
 
 Recommended for robustness (content cannot break Markdown fences):
 ```bash
-code-skeleton pack . --output codebase.md --content-encoding fence-safe
+anatomize pack . --output codebase.md --content-encoding fence-safe
 ```
 
 Maximum robustness (base64 in content fields):
 ```bash
-code-skeleton pack . --output codebase.md --content-encoding base64
+anatomize pack . --output codebase.md --content-encoding base64
 ```
 
 Token reduction for Python-heavy repos (replaces Python file content with a compressed representation):
 ```bash
-code-skeleton pack . --output codebase.md --compress
+anatomize pack . --output codebase.md --compress
 ```
 
 ### 2) Token-efficient “hybrid” bundle (index + selective content)
 Hybrid output is **JSONL** and is optimized for downstream tooling:
 ```bash
-code-skeleton pack . --mode hybrid --output hybrid.jsonl
+anatomize pack . --mode hybrid --output hybrid.jsonl
 ```
 
 Fill in a subset with full content (repeatable patterns):
 ```bash
-code-skeleton pack . --mode hybrid --output hybrid.jsonl \
+anatomize pack . --mode hybrid --output hybrid.jsonl \
   --content "src/my_pkg/**" \
   --summary "docs/**" \
   --meta "**/*.lock"
@@ -65,17 +65,17 @@ code-skeleton pack . --mode hybrid --output hybrid.jsonl \
 ### 3) Strict output budgeting
 Hard cap output size (bytes or tokens):
 ```bash
-code-skeleton pack . --output codebase.md --max-output 50_000t
+anatomize pack . --output codebase.md --max-output 50_000t
 ```
 
 Split into multiple artifacts (markdown/plain/jsonl):
 ```bash
-code-skeleton pack . --output codebase.md --split-output 500kb
+anatomize pack . --output codebase.md --split-output 500kb
 ```
 
 Hybrid can be made to fit a strict budget (auditable downgrades via `selection_trace`):
 ```bash
-code-skeleton pack . --mode hybrid --output hybrid.jsonl \
+anatomize pack . --mode hybrid --output hybrid.jsonl \
   --max-output 50_000t --fit-to-max-output \
   --content "src/my_pkg/**"
 ```
@@ -98,33 +98,33 @@ code-skeleton pack . --mode hybrid --output hybrid.jsonl \
 ### A) Forward dependency closure (entrypoints → what they import)
 Use this to extract a “module slice” with its local import dependencies:
 ```bash
-code-skeleton pack . --output slice.md \
+anatomize pack . --output slice.md \
   --entry src/my_pkg/entry.py --deps
 ```
 
 Multiple entrypoints are allowed:
 ```bash
-code-skeleton pack . --output slice.md \
+anatomize pack . --output slice.md \
   --entry src/my_pkg/a.py --entry src/my_pkg/b.py --deps
 ```
 
 ### B) Reverse dependency closure (who imports a target)
 Use this to capture all local importers of a module/file:
 ```bash
-code-skeleton pack . --output importers.md \
+anatomize pack . --output importers.md \
   --target src/my_pkg/core.py --reverse-deps
 ```
 
 Combine reverse + forward:
 ```bash
-code-skeleton pack . --output importers-and-deps.md \
+anatomize pack . --output importers-and-deps.md \
   --target src/my_pkg/core.py --reverse-deps --deps
 ```
 
 ### C) Reference-based “uses” slicing (requires Pyright)
 Use this when you need “who references these symbols” rather than “who imports”:
 ```bash
-code-skeleton pack . --output uses.md \
+anatomize pack . --output uses.md \
   --target src/my_pkg/core.py --uses --slice-backend pyright
 ```
 
@@ -147,7 +147,7 @@ code-skeleton pack . --output uses.md \
 ## Token diagnostics
 Print a per-file token breakdown (stdout) to identify expensive paths:
 ```bash
-code-skeleton pack . --output codebase.md --token-count-tree
+anatomize pack . --output codebase.md --token-count-tree
 ```
 
 ## Output sizing / limits (strict)
@@ -177,15 +177,15 @@ JSONL output is line-delimited:
 ## Companion workflow: skeleton navigation artifacts (optional)
 If you want a persistent “code map” directory rather than a single bundle:
 ```bash
-code-skeleton generate ./src --output .skeleton --level modules --format yaml --format json --format markdown
-code-skeleton validate .skeleton --source ./src
-code-skeleton estimate ./src --level modules
+anatomize generate ./src --output .skeleton --level modules --format yaml --format json --format markdown
+anatomize validate .skeleton --source ./src
+anatomize estimate ./src --level modules
 ```
 
 ## Configuration-based usage (repeatable runs)
-You can store defaults in `.code-skeleton.yaml` under `pack:` and then run:
+You can store defaults in `.anatomize.yaml` under `pack:` and then run:
 ```bash
-code-skeleton pack .
+anatomize pack .
 ```
 Override any setting via CLI flags (subject to strict mismatch rules for format/output).
 

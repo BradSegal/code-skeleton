@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.core.discovery import ROOT_PACKAGE, discover
-from code_skeleton.core.policy import SymlinkPolicy
+from anatomize.core.discovery import ROOT_PACKAGE, discover
+from anatomize.core.policy import SymlinkPolicy
 
 pytestmark = pytest.mark.integration
 

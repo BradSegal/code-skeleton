@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.core.policy import SymlinkPolicy
-from code_skeleton.pack.formats import PackFormat
-from code_skeleton.pack.runner import pack
+from anatomize.core.policy import SymlinkPolicy
+from anatomize.pack.formats import PackFormat
+from anatomize.pack.runner import pack
 
 pytestmark = pytest.mark.unit
 

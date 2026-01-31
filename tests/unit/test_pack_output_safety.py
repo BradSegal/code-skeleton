@@ -4,11 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.core.policy import SymlinkPolicy
-from code_skeleton.pack.formats import ContentEncoding, PackFormat
-from code_skeleton.pack.limit import parse_output_limit
-from code_skeleton.pack.runner import pack
-from code_skeleton.pack.slicing import SliceBackend
+from anatomize.core.policy import SymlinkPolicy
+from anatomize.pack.formats import ContentEncoding, PackFormat
+from anatomize.pack.limit import parse_output_limit
+from anatomize.pack.runner import pack
+from anatomize.pack.slicing import SliceBackend
 
 pytestmark = pytest.mark.unit
 

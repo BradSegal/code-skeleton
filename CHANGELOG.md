@@ -5,10 +5,10 @@ All notable changes to this project will be documented in this file.
 ## 0.1.0 - 2026-01-31
 
 ### Added
-- `code-skeleton generate`: deterministic skeleton maps (hierarchy/modules/signatures) with YAML/JSON/Markdown outputs and embedded schemas.
-- `code-skeleton validate`: strict validation of skeleton outputs with optional `--fix`.
-- `code-skeleton estimate`: token estimation for skeleton outputs.
-- `code-skeleton pack`: deterministic review bundles with include/ignore filtering, dependency slicing, compression, and token diagnostics.
+- `anatomize generate`: deterministic skeleton maps (hierarchy/modules/signatures) with YAML/JSON/Markdown outputs and embedded schemas.
+- `anatomize validate`: strict validation of skeleton outputs with optional `--fix`.
+- `anatomize estimate`: token estimation for skeleton outputs.
+- `anatomize pack`: deterministic review bundles with include/ignore filtering, dependency slicing, compression, and token diagnostics.
 - Pack output formats: Markdown, plain text, JSON, XML, and JSONL (stream-friendly).
 - Pack safety/limits: `--content-encoding`, `--max-output`, and `--split-output`.
 - Pack slicing: forward dependency closure (`--entry --deps`), reverse import closure (`--reverse-deps`), and optional Pyright-backed `--uses` slicing.

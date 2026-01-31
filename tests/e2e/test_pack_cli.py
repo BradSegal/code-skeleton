@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from code_skeleton.cli import app
+from anatomize.cli import app
 
 pytestmark = pytest.mark.e2e
 

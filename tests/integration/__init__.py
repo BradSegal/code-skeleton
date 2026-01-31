@@ -1,1 +1,1 @@
-"""Integration tests for code-skeleton."""
+"""Integration tests for anatomize."""

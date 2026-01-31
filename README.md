@@ -1,4 +1,4 @@
-# code-skeleton
+# anatomize
 
 [![CI](https://github.com/BradSegal/code-skeleton/actions/workflows/ci.yml/badge.svg)](https://github.com/BradSegal/code-skeleton/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -6,7 +6,7 @@
 
 Generate deterministic, token-efficient maps and review bundles for Python repositories.
 
-`code-skeleton` has two complementary workflows:
+`anatomize` has two complementary workflows:
 
 1) **Skeletons**: structure-only “code maps” for navigation and architecture understanding.
 2) **Packs**: single-file bundles (repomix-style) for external review, with filtering and slicing.
@@ -18,7 +18,7 @@ If you want the full guide (modes, slicing, config, determinism guarantees), see
 ## Installation
 
 ```bash
-pip install code-skeleton
+pip install anatomize
 ```
 
 ---
@@ -29,90 +29,90 @@ pip install code-skeleton
 
 ```bash
 # Generate skeleton output to .skeleton/ (default format: yaml)
-code-skeleton generate ./src
+anatomize generate ./src
 
 # Choose resolution level
-code-skeleton generate ./src --level hierarchy
-code-skeleton generate ./src --level modules
-code-skeleton generate ./src --level signatures
+anatomize generate ./src --level hierarchy
+anatomize generate ./src --level modules
+anatomize generate ./src --level signatures
 
 # Write multiple formats
-code-skeleton generate ./src --format yaml --format json --format markdown --output .skeleton
+anatomize generate ./src --format yaml --format json --format markdown --output .skeleton
 ```
 
 ### Estimate tokens
 
 ```bash
-code-skeleton estimate ./src --level modules
+anatomize estimate ./src --level modules
 ```
 
 ### Validate (and fix) skeleton output
 
 ```bash
 # Validate existing output directory against sources
-code-skeleton validate .skeleton --source ./src
+anatomize validate .skeleton --source ./src
 
 # Rewrite the skeleton output to match regenerated content (strict, atomic-ish replacement)
-code-skeleton validate .skeleton --source ./src --fix
+anatomize validate .skeleton --source ./src --fix
 ```
 
 ### Pack a repository into an AI-friendly bundle
 
 ```bash
 # If --format is omitted, it is inferred from --output when the extension is known
-code-skeleton pack . --output codebase.jsonl
-code-skeleton pack . --output codebase.md
+anatomize pack . --output codebase.jsonl
+anatomize pack . --output codebase.md
 
 # Full bundle
-code-skeleton pack . --format markdown --output codebase.md
+anatomize pack . --format markdown --output codebase.md
 
 # Filter by globs
-code-skeleton pack . --include "src/**" --ignore "**/__pycache__/**" --output src-only.md
+anatomize pack . --include "src/**" --ignore "**/__pycache__/**" --output src-only.md
 
 # Forward dependency closure (entrypoint + everything it imports)
-code-skeleton pack . --entry src/code_skeleton/cli.py --deps --output slice.md
+anatomize pack . --entry src/anatomize/cli.py --deps --output slice.md
 
 # Reverse dependency closure (module + everything that imports it)
-code-skeleton pack . --target src/code_skeleton/cli.py --reverse-deps --output importers.md
+anatomize pack . --target src/anatomize/cli.py --reverse-deps --output importers.md
 
 # Reverse + forward (importers plus what they import)
-code-skeleton pack . --target src/code_skeleton/cli.py --reverse-deps --deps --output importers-and-deps.md
+anatomize pack . --target src/anatomize/cli.py --reverse-deps --deps --output importers-and-deps.md
 
 # Token-efficient Python compression (signatures/imports/constants)
-code-skeleton pack . --compress --output compressed.md
+anatomize pack . --compress --output compressed.md
 
 # Make markdown robust to embedded ``` fences (default)
-code-skeleton pack . --content-encoding fence-safe --output safe.md
+anatomize pack . --content-encoding fence-safe --output safe.md
 
 # Maximum robustness (content is base64-encoded UTF-8)
-code-skeleton pack . --content-encoding base64 --output safe.base64.md
+anatomize pack . --content-encoding base64 --output safe.base64.md
 
 # Split output into multiple files (markdown/plain only)
-code-skeleton pack . --split-output 500kb --output codebase.md
+anatomize pack . --split-output 500kb --output codebase.md
 
 # Hard cap output (bytes or tokens)
-code-skeleton pack . --max-output 20_000t --output codebase.md
+anatomize pack . --max-output 20_000t --output codebase.md
 
 # Print a per-file content token tree to stdout
-code-skeleton pack . --token-count-tree --output codebase.md
+anatomize pack . --token-count-tree --output codebase.md
 
 # JSONL (stream-friendly)
-code-skeleton pack . --format jsonl --output codebase.jsonl
+anatomize pack . --format jsonl --output codebase.jsonl
 
 # Hybrid mode (skeleton-style summaries + selective fill)
 # - defaults to JSONL when --mode hybrid is set
 # - Python files default to summary; non-Python defaults to metadata-only
-code-skeleton pack . --mode hybrid --output hybrid.jsonl
+anatomize pack . --mode hybrid --output hybrid.jsonl
 
 # Hybrid: include full content for a slice and fit within a hard token budget
-code-skeleton pack . --mode hybrid --max-output 50_000t --fit-to-max-output \
+anatomize pack . --mode hybrid --max-output 50_000t --fit-to-max-output \
   --content "src/pkg/**" --output hybrid.slice.jsonl
 ```
 
 Reference-based usage slicing (requires Pyright language server):
 
 ```bash
-code-skeleton pack . --target src/code_skeleton/cli.py --uses --slice-backend pyright --output uses.md
+anatomize pack . --target src/anatomize/cli.py --uses --slice-backend pyright --output uses.md
 ```
 
 ---
@@ -122,8 +122,8 @@ code-skeleton pack . --target src/code_skeleton/cli.py --uses --slice-backend py
 ### Generate skeletons in code
 
 ```python
-from code_skeleton import SkeletonGenerator
-from code_skeleton.formats import OutputFormat, write_skeleton
+from anatomize import SkeletonGenerator
+from anatomize.formats import OutputFormat, write_skeleton
 
 gen = SkeletonGenerator(sources=["./src"])
 skeleton = gen.generate(level="modules")
@@ -131,22 +131,22 @@ skeleton = gen.generate(level="modules")
 print("Modules:", skeleton.metadata.total_modules)
 print("Classes:", skeleton.metadata.total_classes)
 print("Functions:", skeleton.metadata.total_functions)
-print("Estimated tokens:", skeleton.token_estimate)
+print("Estimated tokens:", skeleton.metadata.token_estimate)
 
 write_skeleton(skeleton, ".skeleton", formats=[OutputFormat.YAML, OutputFormat.JSON])
 ```
 
 ### Key exported objects
 
-- `code_skeleton.SkeletonGenerator`: orchestrates discovery + extraction.
-- `code_skeleton.formats.write_skeleton`: writes YAML/JSON/Markdown plus schemas and `manifest.json`.
-- `code_skeleton.validation.validate_skeleton_dir`: strict validator with optional `fix`.
+- `anatomize.SkeletonGenerator`: orchestrates discovery + extraction.
+- `anatomize.formats.write_skeleton`: writes YAML/JSON/Markdown plus schemas and `manifest.json`.
+- `anatomize.validation.validate_skeleton_dir`: strict validator with optional `fix`.
 
 ---
 
-## Configuration (`.code-skeleton.yaml`)
+## Configuration (`.anatomize.yaml`)
 
-The CLI can auto-discover `.code-skeleton.yaml`. Generation commands use config from the current working directory (or explicit `--config`). `pack` discovers config relative to the chosen `ROOT` when `--config` is not provided.
+The CLI can auto-discover `.anatomize.yaml`. Generation commands use config from the current working directory (or explicit `--config`). `pack` discovers config relative to the chosen `ROOT` when `--config` is not provided.
 
 Minimal config:
 
@@ -165,7 +165,7 @@ workers: 0 # 0 = auto
 pack:
   format: markdown # markdown|plain|json|xml|jsonl
   mode: bundle # bundle|hybrid
-  output: code-skeleton-pack.md # if the extension is known, it must match `format`
+  output: anatomize-pack.md # if the extension is known, it must match `format`
   include: []
   ignore: []
   ignore_files: []
@@ -205,16 +205,16 @@ Exclude patterns use gitignore-like semantics and are applied relative to each c
 
 ### Skeleton output directory
 
-`write_skeleton(...)` and `code-skeleton generate ... --output DIR` create:
+`write_skeleton(...)` and `anatomize generate ... --output DIR` create:
 - `hierarchy.yaml|json|md` / `modules.*` / `signatures.*` depending on selected formats and level
 - `schemas/*.json` embedded with the package
 - `manifest.json` (SHA-256 per output file and metadata for validation)
 
 ### Pack output file(s)
 
-`code-skeleton pack` writes one or more files depending on splitting:
-- `code-skeleton-pack.md` (or `.txt|.json|.xml`)
-- if split: `code-skeleton-pack.1.md`, `code-skeleton-pack.2.md`, …
+`anatomize pack` writes one or more files depending on splitting:
+- `anatomize-pack.md` (or `.txt|.json|.xml`)
+- if split: `anatomize-pack.1.md`, `anatomize-pack.2.md`, …
 
 Each pack artifact starts with a lightweight, deterministic overview (and, if enabled, a structure tree) before file blocks/records.
 
@@ -242,7 +242,7 @@ python -m pip install -U pip
 python -m pip install -e ".[dev]"
 
 python -m ruff check .
-python -m mypy -p code_skeleton
+python -m mypy -p anatomize
 python -m pytest
 ```
 

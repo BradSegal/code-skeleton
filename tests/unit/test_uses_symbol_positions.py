@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.pack.uses import python_public_symbol_positions
+from anatomize.pack.uses import python_public_symbol_positions
 
 pytestmark = pytest.mark.unit
 
@@ -50,4 +50,3 @@ def test_positions_include_private_when_requested(tmp_path: Path) -> None:
     pos_all = python_public_symbol_positions(path, include_private=True)
     assert len(pos_all) == 2
     assert {(p.line, p.character) for p in pos_all} == {(0, 4), (2, 4)}
-

@@ -1,6 +1,6 @@
 """Sample models module for testing.
 
-This module demonstrates various Python constructs that code-skeleton
+This module demonstrates various Python constructs that anatomize
 should be able to extract.
 """
 

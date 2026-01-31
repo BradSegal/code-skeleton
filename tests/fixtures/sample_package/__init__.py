@@ -1,1 +1,1 @@
-"""Sample package for testing code-skeleton."""
+"""Sample package for testing anatomize."""

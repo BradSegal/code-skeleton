@@ -1,6 +1,6 @@
 import pytest
 
-from code_skeleton.core.exclude import Excluder
+from anatomize.core.exclude import Excluder
 
 pytestmark = pytest.mark.unit
 

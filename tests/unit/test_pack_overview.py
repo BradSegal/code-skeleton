@@ -5,12 +5,12 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.core.policy import SymlinkPolicy
-from code_skeleton.pack.formats import ContentEncoding, PackFormat
-from code_skeleton.pack.limit import parse_output_limit
-from code_skeleton.pack.mode import PackMode
-from code_skeleton.pack.runner import pack
-from code_skeleton.pack.slicing import SliceBackend
+from anatomize.core.policy import SymlinkPolicy
+from anatomize.pack.formats import ContentEncoding, PackFormat
+from anatomize.pack.limit import parse_output_limit
+from anatomize.pack.mode import PackMode
+from anatomize.pack.runner import pack
+from anatomize.pack.slicing import SliceBackend
 
 pytestmark = pytest.mark.unit
 
@@ -116,4 +116,3 @@ def test_pack_overview_records_python_parse_error_without_failing(tmp_path: Path
     assert py["parse_errors"] == 1
     assert py["modules"][0]["path"] == "src/bad.py"
     assert py["modules"][0]["error"]["type"] == "syntax_error"
-

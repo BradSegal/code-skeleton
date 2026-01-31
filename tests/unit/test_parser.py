@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.core.parser import PythonParser
+from anatomize.core.parser import PythonParser
 
 pytestmark = pytest.mark.unit
 

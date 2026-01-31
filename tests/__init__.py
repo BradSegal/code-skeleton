@@ -1,1 +1,1 @@
-"""Tests for code-skeleton package."""
+"""Tests for anatomize package."""

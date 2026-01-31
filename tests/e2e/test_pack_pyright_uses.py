@@ -8,13 +8,13 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from code_skeleton.cli import app
+from anatomize.cli import app
 
 pytestmark = pytest.mark.e2e
 
 
 def _require_pyright() -> None:
-    if os.environ.get("CODE_SKELETON_RUN_PYRIGHT_E2E") != "1":
+    if os.environ.get("ANATOMIZE_RUN_PYRIGHT_E2E") != "1":
         pytest.skip("pyright e2e not enabled")
     if shutil.which("pyright-langserver") is None:
         pytest.skip("pyright-langserver not installed")

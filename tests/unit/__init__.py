@@ -1,1 +1,1 @@
-"""Unit tests for code-skeleton."""
+"""Unit tests for anatomize."""

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from code_skeleton.core.extractor import SymbolExtractor
-from code_skeleton.core.types import ResolutionLevel
+from anatomize.core.extractor import SymbolExtractor
+from anatomize.core.types import ResolutionLevel
 
 pytestmark = pytest.mark.unit
 
