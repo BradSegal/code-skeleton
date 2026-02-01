@@ -28,16 +28,22 @@ pip install anatomize
 ### Generate skeletons
 
 ```bash
-# Generate skeleton output to .skeleton/ (default format: yaml)
+# Scaffold config for the common workflow “src detailed, tests minimal”
+anatomize init --preset standard
+
+# Generate all configured outputs from .anatomize.yaml (writes into .anatomy/*)
+anatomize generate
+
+# Or run ad-hoc generation for a specific source path
 anatomize generate ./src
 
 # Choose resolution level
-anatomize generate ./src --level hierarchy
-anatomize generate ./src --level modules
-anatomize generate ./src --level signatures
+anatomize generate ./src --level hierarchy --output .anatomy
+anatomize generate ./src --level modules --output .anatomy
+anatomize generate ./src --level signatures --output .anatomy
 
 # Write multiple formats
-anatomize generate ./src --format yaml --format json --format markdown --output .skeleton
+anatomize generate ./src --format yaml --format json --format markdown --output .anatomy
 ```
 
 ### Estimate tokens
@@ -49,11 +55,14 @@ anatomize estimate ./src --level modules
 ### Validate (and fix) skeleton output
 
 ```bash
-# Validate existing output directory against sources
-anatomize validate .skeleton --source ./src
+# Validate all configured outputs (from .anatomize.yaml)
+anatomize validate
 
-# Rewrite the skeleton output to match regenerated content (strict, atomic-ish replacement)
-anatomize validate .skeleton --source ./src --fix
+# Rewrite configured outputs to match regenerated content (strict, atomic-ish replacement)
+anatomize validate --fix
+
+# Or validate a specific directory against explicit sources
+anatomize validate .anatomy --source ./src
 ```
 
 ### Pack a repository into an AI-friendly bundle
@@ -133,7 +142,7 @@ print("Classes:", skeleton.metadata.total_classes)
 print("Functions:", skeleton.metadata.total_functions)
 print("Estimated tokens:", skeleton.metadata.token_estimate)
 
-write_skeleton(skeleton, ".skeleton", formats=[OutputFormat.YAML, OutputFormat.JSON])
+write_skeleton(skeleton, ".anatomy", formats=[OutputFormat.YAML, OutputFormat.JSON])
 ```
 
 ### Key exported objects
@@ -151,9 +160,17 @@ The CLI can auto-discover `.anatomize.yaml`. Generation commands use config from
 Minimal config:
 
 ```yaml
+output: .anatomy
+
 sources:
-  - src
-output: .skeleton
+  - path: src
+    output: src
+    level: modules
+  - path: tests
+    output: tests
+    level: hierarchy
+
+# Defaults applied to sources that omit fields
 level: modules
 formats: [yaml, json, markdown]
 exclude:
@@ -199,6 +216,8 @@ pack:
 
 Exclude patterns use gitignore-like semantics and are applied relative to each configured root.
 
+Tip: `anatomize init --preset standard` scaffolds `.anatomize.yaml` with the common pattern “src detailed, tests minimal”.
+
 ---
 
 ## Output artifacts
@@ -209,6 +228,10 @@ Exclude patterns use gitignore-like semantics and are applied relative to each c
 - `hierarchy.yaml|json|md` / `modules.*` / `signatures.*` depending on selected formats and level
 - `schemas/*.json` embedded with the package
 - `manifest.json` (SHA-256 per output file and metadata for validation)
+
+When `anatomize generate` runs from `.anatomize.yaml`, it writes one skeleton directory per configured source:
+- `.anatomy/src/...`
+- `.anatomy/tests/...`
 
 ### Pack output file(s)
 

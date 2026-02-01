@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from anatomize.config import SkeletonConfig
+from anatomize.config import AnatomizeConfig
 from anatomize.core.types import ResolutionLevel
 from anatomize.formats import OutputFormat
 from anatomize.pack.formats import PackFormat
@@ -14,11 +14,18 @@ pytestmark = pytest.mark.unit
 def test_config_strict_unknown_keys(tmp_path: Path) -> None:
     cfg = tmp_path / ".anatomize.yaml"
     cfg.write_text(
-        "sources: [src]\noutput: .skeleton\nunknown_key: 1\n",
+        (
+            "output: .anatomy\n"
+            "sources:\n"
+            "  - path: src\n"
+            "    output: src\n"
+            "    level: modules\n"
+            "unknown_key: 1\n"
+        ),
         encoding="utf-8",
     )
     with pytest.raises(ValidationError):
-        SkeletonConfig.from_file(cfg)
+        AnatomizeConfig.from_file(cfg)
 
 
 def test_config_find_in_parent_dir(tmp_path: Path) -> None:
@@ -28,8 +35,11 @@ def test_config_find_in_parent_dir(tmp_path: Path) -> None:
     cfg = parent / ".anatomize.yaml"
     cfg.write_text(
         (
-            "sources: [src]\n"
             "output: out\n"
+            "sources:\n"
+            "  - path: src\n"
+            "    output: src\n"
+            "    level: signatures\n"
             "level: signatures\n"
             "formats: [json]\n"
             "exclude: [excluded]\n"
@@ -38,9 +48,12 @@ def test_config_find_in_parent_dir(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    found = SkeletonConfig.find_config(start_dir=child)
+    found = AnatomizeConfig.find_config(start_dir=child)
     assert found is not None
-    assert found.sources == ["src"]
+    assert len(found.sources) == 1
+    assert found.sources[0].path == "src"
+    assert found.sources[0].output == "src"
+    assert found.sources[0].level == ResolutionLevel.SIGNATURES
     assert found.output == "out"
     assert found.level == ResolutionLevel.SIGNATURES
     assert found.formats == [OutputFormat.JSON]
@@ -53,7 +66,11 @@ def test_config_pack_section_parses_and_is_strict(tmp_path: Path) -> None:
     cfg = tmp_path / ".anatomize.yaml"
     cfg.write_text(
         (
-            "sources: [src]\n"
+            "output: .anatomy\n"
+            "sources:\n"
+            "  - path: src\n"
+            "    output: src\n"
+            "    level: modules\n"
             "pack:\n"
             "  format: json\n"
             "  output: out.json\n"
@@ -61,7 +78,7 @@ def test_config_pack_section_parses_and_is_strict(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    loaded = SkeletonConfig.from_file(cfg)
+    loaded = AnatomizeConfig.from_file(cfg)
     assert loaded.pack is not None
     assert loaded.pack.format is PackFormat.JSON
     assert loaded.pack.output == "out.json"
@@ -70,7 +87,7 @@ def test_config_pack_section_parses_and_is_strict(tmp_path: Path) -> None:
     cfg2 = tmp_path / ".anatomize2.yaml"
     cfg2.write_text("pack:\n  unknown: 1\n", encoding="utf-8")
     with pytest.raises(ValidationError):
-        SkeletonConfig.from_file(cfg2)
+        AnatomizeConfig.from_file(cfg2)
 
 
 def test_config_pack_output_extension_must_match_format(tmp_path: Path) -> None:
@@ -84,4 +101,20 @@ def test_config_pack_output_extension_must_match_format(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     with pytest.raises(ValidationError):
-        SkeletonConfig.from_file(cfg)
+        AnatomizeConfig.from_file(cfg)
+
+
+def test_config_rejects_unsafe_source_output(tmp_path: Path) -> None:
+    cfg = tmp_path / ".anatomize.yaml"
+    cfg.write_text(
+        (
+            "output: .anatomy\n"
+            "sources:\n"
+            "  - path: src\n"
+            "    output: ../escape\n"
+            "    level: modules\n"
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(ValidationError):
+        AnatomizeConfig.from_file(cfg)

@@ -16,8 +16,26 @@ def test_cli_generate_validate_and_fix(monkeypatch: pytest.MonkeyPatch, tmp_path
     mod = pkg / "mod.py"
     mod.write_text("def f(x: int) -> int:\n    return x + 1\n", encoding="utf-8")
 
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_smoke.py").write_text("def test_ok() -> None:\n    assert True\n", encoding="utf-8")
+
     (tmp_path / ".anatomize.yaml").write_text(
-        "sources: [src]\noutput: out\nlevel: modules\nformats: [json]\nexclude: []\nsymlinks: forbid\nworkers: 0\n",
+        (
+            "output: out\n"
+            "sources:\n"
+            "  - path: src\n"
+            "    output: src\n"
+            "    level: modules\n"
+            "  - path: tests\n"
+            "    output: tests\n"
+            "    level: hierarchy\n"
+            "level: modules\n"
+            "formats: [json]\n"
+            "exclude: []\n"
+            "symlinks: forbid\n"
+            "workers: 0\n"
+        ),
         encoding="utf-8",
     )
 
@@ -26,20 +44,21 @@ def test_cli_generate_validate_and_fix(monkeypatch: pytest.MonkeyPatch, tmp_path
 
     result = runner.invoke(app, ["generate"])
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "out" / "hierarchy.json").exists()
+    assert (tmp_path / "out" / "src" / "hierarchy.json").exists()
+    assert (tmp_path / "out" / "tests" / "hierarchy.json").exists()
 
-    ok = runner.invoke(app, ["validate", "out"])
+    ok = runner.invoke(app, ["validate"])
     assert ok.exit_code == 0, ok.output
 
     # Mutate source -> validate must fail
     mod.write_text("def f2(x: int) -> int:\n    return x + 2\n", encoding="utf-8")
-    bad = runner.invoke(app, ["validate", "out"])
+    bad = runner.invoke(app, ["validate"])
     assert bad.exit_code != 0
 
-    fixed = runner.invoke(app, ["validate", "out", "--fix"])
+    fixed = runner.invoke(app, ["validate", "--fix"])
     assert fixed.exit_code == 0, fixed.output
 
-    ok2 = runner.invoke(app, ["validate", "out"])
+    ok2 = runner.invoke(app, ["validate"])
     assert ok2.exit_code == 0, ok2.output
 
 
@@ -80,11 +99,10 @@ def test_cli_invalid_format_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: 
     src = tmp_path / "src"
     src.mkdir()
     (src / "a.py").write_text("x = 1\n", encoding="utf-8")
-    (tmp_path / ".anatomize.yaml").write_text("sources: [src]\n", encoding="utf-8")
 
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    res = runner.invoke(app, ["generate", "--format", "nope"])
+    res = runner.invoke(app, ["generate", str(src), "--format", "nope"])
     assert res.exit_code != 0
 
 

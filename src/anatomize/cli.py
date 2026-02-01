@@ -4,20 +4,21 @@ This module provides the CLI for generating and validating skeleton outputs.
 
 Usage
 -----
-    anatomize generate ./src --output .skeleton
-    anatomize validate .skeleton --source ./src
+    anatomize generate ./src --output .anatomy
+    anatomize validate .anatomy --source ./src
     anatomize estimate ./src --level modules
 """
 
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from enum import Enum
+from pathlib import Path, PurePosixPath
 from typing import Annotated
 
 import typer
 
-from anatomize.config import SkeletonConfig
+from anatomize.config import AnatomizeConfig, SkeletonSourceConfig
 from anatomize.core.policy import SymlinkPolicy
 from anatomize.core.types import ResolutionLevel
 from anatomize.formats import OutputFormat, write_skeleton
@@ -36,6 +37,10 @@ app = typer.Typer(
 )
 
 logger = logging.getLogger(__name__)
+
+class _Preset(str, Enum):
+    STANDARD = "standard"
+
 
 def version_callback(value: bool) -> None:
     """Print version and exit."""
@@ -69,27 +74,62 @@ def main(
         logging.getLogger().setLevel(logging.DEBUG)
 
 
-def _load_config_from(config_path: Path | None) -> SkeletonConfig | None:
-    if config_path is None:
-        return SkeletonConfig.find_config()
-    return SkeletonConfig.from_file(config_path)
+@app.command()
+def init(
+    preset: Annotated[
+        _Preset,
+        typer.Option("--preset", help="Config preset to scaffold."),
+    ] = _Preset.STANDARD,
+    output: Annotated[
+        str,
+        typer.Option("--output", "-o", help="Root output directory for skeleton outputs."),
+    ] = ".anatomy",
+) -> None:
+    """Create a new `.anatomize.yaml` in the current directory."""
+    try:
+        path = Path.cwd() / ".anatomize.yaml"
+        if path.exists():
+            raise typer.BadParameter(".anatomize.yaml already exists")
+
+        cfg = _build_preset_config(Path.cwd(), preset)
+        cfg.output = output
+        path.write_text(cfg.to_yaml(), encoding="utf-8")
+        typer.echo(f"Wrote {path}")
+    except ValueError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
 
 
-def _load_config_for_root(config_path: Path | None, root: Path) -> SkeletonConfig | None:
+def _load_config_from(config_path: Path | None) -> tuple[AnatomizeConfig | None, Path | None]:
     if config_path is not None:
-        return SkeletonConfig.from_file(config_path)
-    return SkeletonConfig.find_config(start_dir=root)
+        return AnatomizeConfig.from_file(config_path), config_path
+    found = AnatomizeConfig.find_config_path()
+    if found is None:
+        return None, None
+    return AnatomizeConfig.from_file(found), found
 
 
-def _resolve_sources(cli_sources: list[Path], config: SkeletonConfig | None) -> list[Path]:
+def _load_config_for_root(config_path: Path | None, root: Path) -> tuple[AnatomizeConfig | None, Path | None]:
+    if config_path is not None:
+        return AnatomizeConfig.from_file(config_path), config_path
+    found = AnatomizeConfig.find_config_path(start_dir=root)
+    if found is None:
+        return None, None
+    return AnatomizeConfig.from_file(found), found
+
+
+def _resolve_sources(cli_sources: list[Path], config: AnatomizeConfig | None) -> list[Path]:
     if cli_sources:
         return cli_sources
     if config is None:
-        raise typer.BadParameter("No sources provided and no .anatomize.yaml found")
-    return [Path(s) for s in config.sources]
+        raise typer.BadParameter("No sources provided and no .anatomize.yaml found (run `anatomize init`)")
+    if not config.sources:
+        raise typer.BadParameter("No sources configured in .anatomize.yaml (run `anatomize init`)")
+    # In config mode, we treat each configured entry as an individual source path.
+    return [Path(s.path) for s in config.sources]
 
 
-def _resolve_level(level: str | None, config: SkeletonConfig | None) -> ResolutionLevel:
+def _resolve_level(level: str | None, config: AnatomizeConfig | None) -> ResolutionLevel:
     if level is not None:
         return ResolutionLevel(level)
     if config is None:
@@ -97,7 +137,7 @@ def _resolve_level(level: str | None, config: SkeletonConfig | None) -> Resoluti
     return config.level
 
 
-def _resolve_formats(formats: list[str] | None, config: SkeletonConfig | None) -> list[OutputFormat]:
+def _resolve_formats(formats: list[str] | None, config: AnatomizeConfig | None) -> list[OutputFormat]:
     if formats is None:
         return config.formats if config is not None else [OutputFormat.YAML]
     resolved: list[OutputFormat] = []
@@ -106,16 +146,55 @@ def _resolve_formats(formats: list[str] | None, config: SkeletonConfig | None) -
     return resolved
 
 
-def _resolve_symlinks(config: SkeletonConfig | None) -> SymlinkPolicy:
+def _resolve_symlinks(config: AnatomizeConfig | None) -> SymlinkPolicy:
     if config is None:
         return SymlinkPolicy.FORBID
     return config.symlinks
 
 
-def _resolve_workers(config: SkeletonConfig | None) -> int:
+def _resolve_workers(config: AnatomizeConfig | None) -> int:
     if config is None:
         return 0
     return config.workers
+
+
+def _preset_sources_standard(root: Path) -> list[SkeletonSourceConfig]:
+    sources: list[SkeletonSourceConfig] = []
+    src = root / "src"
+    tests = root / "tests"
+    if src.exists() and src.is_dir():
+        sources.append(SkeletonSourceConfig(path="src", output="src", level=ResolutionLevel.MODULES))
+    if tests.exists() and tests.is_dir():
+        sources.append(SkeletonSourceConfig(path="tests", output="tests", level=ResolutionLevel.HIERARCHY))
+    if not sources:
+        raise ValueError("Preset 'standard' requires ./src and/or ./tests to exist")
+    return sources
+
+
+def _build_preset_config(root: Path, preset: _Preset) -> AnatomizeConfig:
+    if preset is _Preset.STANDARD:
+        return AnatomizeConfig(output=".anatomy", sources=_preset_sources_standard(root))
+    raise ValueError(f"Unknown preset: {preset}")
+
+
+def _safe_output_subdir(rel: str) -> str:
+    rel = rel.replace("\\", "/").strip("/")
+    if not rel:
+        raise ValueError("source.output must be a non-empty relative path")
+    p = PurePosixPath(rel)
+    if p.is_absolute() or ".." in p.parts:
+        raise ValueError(f"Invalid source.output (must be a safe relative path): {rel}")
+    return p.as_posix()
+
+
+def _resolve_source_output_name(source: SkeletonSourceConfig, *, idx: int) -> str:
+    if source.output is not None:
+        return _safe_output_subdir(source.output)
+    # Deterministic fallback: leaf dir name of `path`.
+    leaf = PurePosixPath(source.path.replace("\\", "/").strip("/")).name
+    if not leaf:
+        leaf = f"source-{idx}"
+    return _safe_output_subdir(leaf)
 
 
 @app.command()
@@ -170,6 +249,10 @@ def generate(
         int | None,
         typer.Option("--workers", help="Worker count for extraction. 0 means auto.", min=0),
     ] = None,
+    preset: Annotated[
+        _Preset | None,
+        typer.Option("--preset", help="Generate from a built-in preset (no config required)."),
+    ] = None,
 ) -> None:
     """Generate a skeleton for a source directory.
 
@@ -180,40 +263,94 @@ def generate(
         anatomize generate ./src -f yaml -f json -f markdown
     """
     try:
-        cfg = _load_config_from(config)
-        resolved_sources = _resolve_sources(sources, cfg)
-        resolution = _resolve_level(level, cfg)
-        formats = _resolve_formats(format, cfg)
+        cfg, cfg_path = _load_config_from(config)
 
-        out_dir = output if output is not None else Path(cfg.output) if cfg is not None else Path(".skeleton")
-        resolved_exclude = exclude if exclude is not None else cfg.exclude if cfg is not None else None
-        resolved_symlinks = symlinks if symlinks is not None else _resolve_symlinks(cfg)
-        resolved_workers = workers if workers is not None else _resolve_workers(cfg)
+        if sources:
+            if preset is not None:
+                raise typer.BadParameter("--preset cannot be used when SOURCE paths are provided")
 
-        typer.echo(f"Generating skeleton for {', '.join(str(s) for s in resolved_sources)}...")
+            resolution = _resolve_level(level, cfg)
+            formats = _resolve_formats(format, cfg)
+            out_dir = output if output is not None else Path(".anatomy")
+            resolved_exclude = exclude if exclude is not None else cfg.exclude if cfg is not None else None
+            resolved_symlinks = symlinks if symlinks is not None else _resolve_symlinks(cfg)
+            resolved_workers = workers if workers is not None else _resolve_workers(cfg)
 
-        # Generate skeleton
-        generator = SkeletonGenerator(
-            sources=resolved_sources,
-            exclude=resolved_exclude,
-            symlinks=resolved_symlinks,
-            workers=resolved_workers,
-        )
-        skeleton = generator.generate(level=resolution)
+            typer.echo(f"Generating skeleton for {', '.join(str(s) for s in sources)}...")
+            generator = SkeletonGenerator(
+                sources=sources,
+                exclude=resolved_exclude,
+                symlinks=resolved_symlinks,
+                workers=resolved_workers,
+            )
+            skeleton = generator.generate(level=resolution)
+            write_skeleton(skeleton, out_dir, formats=formats)
 
-        # Write output
-        write_skeleton(skeleton, out_dir, formats=formats)
+            typer.echo("")
+            typer.echo("Summary:")
+            typer.echo(f"  Packages:  {skeleton.metadata.total_packages}")
+            typer.echo(f"  Modules:   {skeleton.metadata.total_modules}")
+            typer.echo(f"  Classes:   {skeleton.metadata.total_classes}")
+            typer.echo(f"  Functions: {skeleton.metadata.total_functions}")
+            typer.echo(f"  Tokens:    ~{skeleton.metadata.token_estimate:,}")
+            typer.echo("")
+            typer.echo(f"Output written to: {out_dir}")
+            return
 
-        # Print summary
-        typer.echo("")
-        typer.echo("Summary:")
-        typer.echo(f"  Packages:  {skeleton.metadata.total_packages}")
-        typer.echo(f"  Modules:   {skeleton.metadata.total_modules}")
-        typer.echo(f"  Classes:   {skeleton.metadata.total_classes}")
-        typer.echo(f"  Functions: {skeleton.metadata.total_functions}")
-        typer.echo(f"  Tokens:    ~{skeleton.metadata.token_estimate:,}")
-        typer.echo("")
-        typer.echo(f"Output written to: {out_dir}")
+        # Config/preset mode (multi-output).
+        if any(x is not None for x in (output, level, format, exclude, symlinks, workers)):
+            raise typer.BadParameter(
+                "In config/preset mode, set output/level/formats/exclude/symlinks/workers in .anatomize.yaml"
+            )
+
+        project_root = cfg_path.parent if cfg_path is not None else Path.cwd()
+        effective = _build_preset_config(project_root, preset) if preset is not None else cfg
+        if effective is None:
+            raise typer.BadParameter("No sources provided and no .anatomize.yaml found (run `anatomize init`)")
+        if not effective.sources:
+            raise typer.BadParameter("No sources configured in .anatomize.yaml (run `anatomize init`)")
+
+        out_root = Path(effective.output)
+        if not out_root.is_absolute():
+            out_root = (project_root / out_root).resolve()
+
+        seen_outputs: set[str] = set()
+        jobs: list[tuple[str, Path, Path, ResolutionLevel, list[OutputFormat], list[str], SymlinkPolicy, int]] = []
+
+        for i, s in enumerate(effective.sources):
+            out_name = _resolve_source_output_name(s, idx=i)
+            if out_name in seen_outputs:
+                raise ValueError(f"Duplicate sources[].output resolved to the same directory: {out_name}")
+            seen_outputs.add(out_name)
+
+            src_path = Path(s.path)
+            if not src_path.is_absolute():
+                src_path = (project_root / src_path).resolve()
+            if not src_path.exists() or not src_path.is_dir():
+                raise ValueError(f"Source path must be an existing directory: {src_path}")
+
+            out_dir = (out_root / out_name).resolve()
+            lvl = s.level if s.level is not None else effective.level
+            fmts = s.formats if s.formats is not None else effective.formats
+            resolved_exclude = s.exclude if s.exclude is not None else effective.exclude
+            resolved_symlinks = s.symlinks if s.symlinks is not None else effective.symlinks
+            resolved_workers = s.workers if s.workers is not None else effective.workers
+
+            jobs.append(
+                (out_name, src_path, out_dir, lvl, fmts, resolved_exclude, resolved_symlinks, resolved_workers)
+            )
+
+        typer.echo(f"Generating {len(jobs)} skeleton output(s) into: {out_root}")
+        for out_name, src_path, out_dir, lvl, fmts, resolved_exclude, resolved_symlinks, resolved_workers in jobs:
+            typer.echo(f"- {out_name}: {src_path} ({lvl.value})")
+            generator = SkeletonGenerator(
+                sources=[src_path],
+                exclude=resolved_exclude,
+                symlinks=resolved_symlinks,
+                workers=resolved_workers,
+            )
+            skeleton = generator.generate(level=lvl)
+            write_skeleton(skeleton, out_dir, formats=fmts, metadata_base_dir=project_root)
 
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -260,6 +397,10 @@ def estimate(
         int | None,
         typer.Option("--workers", help="Worker count for extraction. 0 means auto.", min=0),
     ] = None,
+    preset: Annotated[
+        _Preset | None,
+        typer.Option("--preset", help="Estimate using a built-in preset (no config required)."),
+    ] = None,
 ) -> None:
     """Estimate token count for a source directory.
 
@@ -269,31 +410,66 @@ def estimate(
         anatomize estimate ./src --level signatures
     """
     try:
-        cfg = _load_config_from(config)
-        resolved_sources = _resolve_sources(sources, cfg)
-        resolution = _resolve_level(level, cfg)
-        resolved_exclude = exclude if exclude is not None else cfg.exclude if cfg is not None else None
-        resolved_symlinks = symlinks if symlinks is not None else _resolve_symlinks(cfg)
-        resolved_workers = workers if workers is not None else _resolve_workers(cfg)
+        cfg, cfg_path = _load_config_from(config)
 
-        typer.echo(
-            f"Estimating tokens for {', '.join(str(s) for s in resolved_sources)} at level '{resolution.value}'..."
-        )
+        if sources:
+            if preset is not None:
+                raise typer.BadParameter("--preset cannot be used when SOURCE paths are provided")
+            resolution = _resolve_level(level, cfg)
+            resolved_exclude = exclude if exclude is not None else cfg.exclude if cfg is not None else None
+            resolved_symlinks = symlinks if symlinks is not None else _resolve_symlinks(cfg)
+            resolved_workers = workers if workers is not None else _resolve_workers(cfg)
 
-        generator = SkeletonGenerator(
-            sources=resolved_sources,
-            exclude=resolved_exclude,
-            symlinks=resolved_symlinks,
-            workers=resolved_workers,
-        )
-        skeleton = generator.generate(level=resolution)
+            typer.echo(f"Estimating tokens for {', '.join(str(s) for s in sources)} at level '{resolution.value}'...")
+            generator = SkeletonGenerator(
+                sources=sources,
+                exclude=resolved_exclude,
+                symlinks=resolved_symlinks,
+                workers=resolved_workers,
+            )
+            skeleton = generator.generate(level=resolution)
 
-        typer.echo("")
-        typer.echo("Estimation:")
-        typer.echo(f"  Modules:   {skeleton.metadata.total_modules}")
-        typer.echo(f"  Classes:   {skeleton.metadata.total_classes}")
-        typer.echo(f"  Functions: {skeleton.metadata.total_functions}")
-        typer.echo(f"  Tokens:    ~{skeleton.metadata.token_estimate:,}")
+            typer.echo("")
+            typer.echo("Estimation:")
+            typer.echo(f"  Modules:   {skeleton.metadata.total_modules}")
+            typer.echo(f"  Classes:   {skeleton.metadata.total_classes}")
+            typer.echo(f"  Functions: {skeleton.metadata.total_functions}")
+            typer.echo(f"  Tokens:    ~{skeleton.metadata.token_estimate:,}")
+            return
+
+        if any(x is not None for x in (level, exclude, symlinks, workers)):
+            raise typer.BadParameter("In config/preset mode, set level/exclude/symlinks/workers in .anatomize.yaml")
+
+        project_root = cfg_path.parent if cfg_path is not None else Path.cwd()
+        effective = _build_preset_config(project_root, preset) if preset is not None else cfg
+        if effective is None:
+            raise typer.BadParameter("No sources provided and no .anatomize.yaml found (run `anatomize init`)")
+        if not effective.sources:
+            raise typer.BadParameter("No sources configured in .anatomize.yaml (run `anatomize init`)")
+
+        total_tokens = 0
+        typer.echo(f"Estimating tokens for {len(effective.sources)} configured source(s):")
+        for i, s in enumerate(effective.sources):
+            out_name = _resolve_source_output_name(s, idx=i)
+            src_path = Path(s.path)
+            if not src_path.is_absolute():
+                src_path = (project_root / src_path).resolve()
+            lvl = s.level if s.level is not None else effective.level
+            resolved_exclude = s.exclude if s.exclude is not None else effective.exclude
+            resolved_symlinks = s.symlinks if s.symlinks is not None else effective.symlinks
+            resolved_workers = s.workers if s.workers is not None else effective.workers
+
+            generator = SkeletonGenerator(
+                sources=[src_path],
+                exclude=resolved_exclude,
+                symlinks=resolved_symlinks,
+                workers=resolved_workers,
+            )
+            skeleton = generator.generate(level=lvl)
+            total_tokens += skeleton.metadata.token_estimate
+            typer.echo(f"- {out_name}: ~{skeleton.metadata.token_estimate:,} tokens ({lvl.value})")
+
+        typer.echo(f"Total: ~{total_tokens:,} tokens")
 
     except ValueError as e:
         typer.echo(f"Error: {e}", err=True)
@@ -307,15 +483,12 @@ def estimate(
 @app.command()
 def validate(
     skeleton_dir: Annotated[
-        Path,
+        Path | None,
         typer.Argument(
-            help="Skeleton directory to validate.",
-            exists=True,
-            file_okay=False,
-            dir_okay=True,
-            resolve_path=True,
+            help="Skeleton directory to validate. Omit to validate all configured outputs.",
+            show_default=False,
         ),
-    ],
+    ] = None,
     sources: Annotated[
         list[Path],
         typer.Option(
@@ -348,6 +521,10 @@ def validate(
         bool,
         typer.Option("--fix", help="Rewrite skeleton output to match regenerated content."),
     ] = False,
+    preset: Annotated[
+        _Preset | None,
+        typer.Option("--preset", help="Validate using a built-in preset (no config required)."),
+    ] = None,
 ) -> None:
     """Validate skeleton against source directories.
 
@@ -359,21 +536,77 @@ def validate(
     try:
         from anatomize.validation import validate_skeleton_dir
 
-        cfg = _load_config_from(config)
-        resolved_sources = _resolve_sources(sources, cfg)
-        resolved_exclude = exclude if exclude is not None else cfg.exclude if cfg is not None else None
-        resolved_symlinks = symlinks if symlinks is not None else _resolve_symlinks(cfg)
-        resolved_workers = workers if workers is not None else _resolve_workers(cfg)
+        cfg, cfg_path = _load_config_from(config)
 
-        fixed = validate_skeleton_dir(
-            skeleton_dir=skeleton_dir,
-            sources=resolved_sources,
-            exclude=resolved_exclude,
-            symlinks=resolved_symlinks,
-            workers=resolved_workers,
-            fix=fix,
-        )
-        typer.echo("Skeleton updated." if fixed else "Validation passed.")
+        if skeleton_dir is not None:
+            if preset is not None:
+                raise typer.BadParameter("--preset cannot be used when SKELETON_DIR is provided")
+            if not skeleton_dir.exists() or not skeleton_dir.is_dir():
+                raise typer.BadParameter(f"SKELETON_DIR must be an existing directory: {skeleton_dir}")
+            if not sources:
+                raise typer.BadParameter(
+                    "When SKELETON_DIR is provided, use --source "
+                    "(or omit SKELETON_DIR to validate configured outputs)"
+                )
+
+            resolved_exclude = exclude if exclude is not None else cfg.exclude if cfg is not None else None
+            resolved_symlinks = symlinks if symlinks is not None else _resolve_symlinks(cfg)
+            resolved_workers = workers if workers is not None else _resolve_workers(cfg)
+
+            fixed = validate_skeleton_dir(
+                skeleton_dir=skeleton_dir,
+                sources=sources,
+                exclude=resolved_exclude,
+                symlinks=resolved_symlinks,
+                workers=resolved_workers,
+                fix=fix,
+                metadata_base_dir=skeleton_dir,
+            )
+            typer.echo("Skeleton updated." if fixed else "Validation passed.")
+            return
+
+        if any(x is not None for x in (exclude, symlinks, workers)):
+            raise typer.BadParameter("In config/preset mode, set exclude/symlinks/workers in .anatomize.yaml")
+        if sources:
+            raise typer.BadParameter("In config/preset mode, do not pass --source (use config sources)")
+
+        project_root = cfg_path.parent if cfg_path is not None else Path.cwd()
+        effective = _build_preset_config(project_root, preset) if preset is not None else cfg
+        if effective is None:
+            raise typer.BadParameter("No .anatomize.yaml found (run `anatomize init`)")
+        if not effective.sources:
+            raise typer.BadParameter("No sources configured in .anatomize.yaml (run `anatomize init`)")
+
+        out_root = Path(effective.output)
+        if not out_root.is_absolute():
+            out_root = (project_root / out_root).resolve()
+
+        changed_any = False
+        for i, s in enumerate(effective.sources):
+            out_name = _resolve_source_output_name(s, idx=i)
+            src_path = Path(s.path)
+            if not src_path.is_absolute():
+                src_path = (project_root / src_path).resolve()
+            skel_dir = (out_root / out_name).resolve()
+            if not skel_dir.exists() or not skel_dir.is_dir():
+                raise ValueError(f"Missing skeleton output directory: {skel_dir} (run `anatomize generate`)")
+
+            resolved_exclude = s.exclude if s.exclude is not None else effective.exclude
+            resolved_symlinks = s.symlinks if s.symlinks is not None else effective.symlinks
+            resolved_workers = s.workers if s.workers is not None else effective.workers
+
+            fixed = validate_skeleton_dir(
+                skeleton_dir=skel_dir,
+                sources=[src_path],
+                exclude=resolved_exclude,
+                symlinks=resolved_symlinks,
+                workers=resolved_workers,
+                fix=fix,
+                metadata_base_dir=project_root,
+            )
+            changed_any = changed_any or fixed
+
+        typer.echo("Skeleton updated." if changed_any else "Validation passed.")
 
     except typer.Exit:
         raise
@@ -587,7 +820,7 @@ def pack(
         from anatomize.pack.formats import infer_pack_format_from_output_path
         from anatomize.pack.runner import pack as run_pack
 
-        cfg = _load_config_for_root(config, root)
+        cfg, _cfg_path = _load_config_for_root(config, root)
         pack_cfg = cfg.pack if cfg is not None and cfg.pack is not None else PackConfig()
 
         resolved_mode = pack_cfg.mode if mode is None else PackMode(mode)

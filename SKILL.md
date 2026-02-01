@@ -177,8 +177,8 @@ JSONL output is line-delimited:
 ## Companion workflow: skeleton navigation artifacts (optional)
 If you want a persistent “code map” directory rather than a single bundle:
 ```bash
-anatomize generate ./src --output .skeleton --level modules --format yaml --format json --format markdown
-anatomize validate .skeleton --source ./src
+anatomize generate ./src --output .anatomy --level modules --format yaml --format json --format markdown
+anatomize validate .anatomy --source ./src
 anatomize estimate ./src --level modules
 ```
 

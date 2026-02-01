@@ -62,14 +62,24 @@ Generates a skeleton from sources and writes YAML/JSON/Markdown.
 Key options:
 - `--level`: `hierarchy|modules|signatures`
 - `--format`: repeatable (`yaml|json|markdown`)
-- `--output`: directory (default `.skeleton`)
+- `--output`: directory (default `.anatomy`)
 - `--exclude`: gitignore-like patterns
 - `--symlinks`: `forbid|files|dirs|all`
 - `--workers`: extraction worker count (0 = auto)
 
 Examples:
 ```bash
-anatomize generate ./src --output .skeleton --level signatures --format yaml --format json
+anatomize generate ./src --output .anatomy --level signatures --format yaml --format json
+```
+
+Config-driven multi-output generation:
+- `anatomize generate` reads `.anatomize.yaml` and generates one output directory per configured source.
+- This makes “src detailed, tests minimal” a first-class workflow.
+
+```bash
+anatomize init --preset standard
+anatomize generate
+anatomize validate
 ```
 
 ### `estimate`
@@ -88,8 +98,10 @@ Regenerates expected output in a temp directory and compares to an existing skel
 
 Example:
 ```bash
-anatomize validate .skeleton --source ./src
-anatomize validate .skeleton --source ./src --fix
+anatomize validate               # validate all configured outputs (from .anatomize.yaml)
+anatomize validate --fix         # fix all configured outputs (atomic-ish replacement)
+anatomize validate .anatomy/src --source ./src
+anatomize validate .anatomy/src --source ./src --fix
 ```
 
 ---

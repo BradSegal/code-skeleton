@@ -29,6 +29,7 @@ def validate_skeleton_dir(
     symlinks: SymlinkPolicy,
     workers: int,
     fix: bool,
+    metadata_base_dir: Path,
 ) -> bool:
     """Validate a skeleton directory against the given sources.
 
@@ -47,7 +48,7 @@ def validate_skeleton_dir(
 
     with tempfile.TemporaryDirectory(**tmp_kwargs) as tmp:
         tmp_dir = Path(tmp)
-        write_skeleton(skeleton, tmp_dir, formats=formats, metadata_base_dir=skeleton_dir)
+        write_skeleton(skeleton, tmp_dir, formats=formats, metadata_base_dir=metadata_base_dir)
 
         expected_manifest = tmp_dir / "manifest.json"
         actual_manifest = skeleton_dir / "manifest.json"

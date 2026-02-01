@@ -5,7 +5,7 @@ This module provides configuration loading from files and environment variables.
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
@@ -65,124 +65,113 @@ class PackConfig(BaseModel):
             )
 
 
-class SkeletonConfig(BaseModel):
-    """Configuration for skeleton generation.
+DEFAULT_EXCLUDE: list[str] = [
+    "__pycache__",
+    "*.pyc",
+    ".git",
+    ".venv",
+    ".anatomy",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+]
 
-    This can be loaded from a .anatomize.yaml file in the project root.
 
-    Attributes
-    ----------
-    sources
-        Source directories to analyze.
-    output
-        Output directory for skeleton files.
-    level
-        Default resolution level.
-    formats
-        Default output formats.
-    exclude
-        Exclude patterns (gitignore-like) applied relative to each source root.
-    symlinks
-        Symlink policy: forbid, files, dirs, or all.
-    workers
-        Worker count for extraction (0 = auto).
-    pack
-        Defaults for `anatomize pack`.
+class SkeletonSourceConfig(BaseModel):
+    """One configured skeleton output."""
+
+    path: str
+    output: str | None = None
+    level: ResolutionLevel | None = None
+    formats: list[OutputFormat] | None = None
+    exclude: list[str] | None = None
+    symlinks: SymlinkPolicy | None = None
+    workers: int | None = Field(default=None, ge=0)
+
+    model_config = {"extra": "forbid"}
+
+    def model_post_init(self, __context: Any) -> None:
+        if not self.path.strip():
+            raise ValueError("sources[].path must be non-empty")
+        if self.output is None:
+            return
+        rel = self.output.replace("\\", "/").strip("/")
+        if not rel:
+            raise ValueError("sources[].output must be a non-empty relative path")
+        p = PurePosixPath(rel)
+        if p.is_absolute() or ".." in p.parts:
+            raise ValueError(f"sources[].output must be a safe relative path (no '..'): {self.output}")
+        self.output = p.as_posix()
+
+
+class AnatomizeConfig(BaseModel):
+    """Project configuration loaded from `.anatomize.yaml`.
+
+    This config can define multiple skeleton outputs (per-source resolution),
+    plus defaults for `anatomize pack`.
     """
 
-    sources: list[str] = Field(default_factory=lambda: ["src"])
-    output: str = ".skeleton"
+    output: str = ".anatomy"
+    sources: list[SkeletonSourceConfig] = Field(default_factory=list)
+
+    # Defaults applied to sources that omit fields.
     level: ResolutionLevel = ResolutionLevel.MODULES
     formats: list[OutputFormat] = Field(default_factory=lambda: [OutputFormat.YAML])
-    exclude: list[str] = Field(
-        default_factory=lambda: [
-            "__pycache__",
-            "*.pyc",
-            ".git",
-            ".venv",
-            ".skeleton",
-            ".mypy_cache",
-            ".pytest_cache",
-        ]
-    )
+    exclude: list[str] = Field(default_factory=lambda: list(DEFAULT_EXCLUDE))
     symlinks: SymlinkPolicy = SymlinkPolicy.FORBID
     workers: int = Field(default=0, ge=0)
+
     pack: PackConfig | None = None
 
     model_config = {"extra": "forbid"}
 
     @classmethod
-    def from_file(cls, path: Path) -> SkeletonConfig:
-        """Load configuration from a YAML file.
-
-        Parameters
-        ----------
-        path
-            Path to the configuration file.
-
-        Returns
-        -------
-        SkeletonConfig
-            Loaded configuration.
-        """
+    def from_file(cls, path: Path) -> AnatomizeConfig:
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
-
         if data is None:
             data = {}
-
         return cls.model_validate(data)
 
     @classmethod
-    def find_config(cls, start_dir: Path | None = None) -> SkeletonConfig | None:
-        """Find and load configuration file.
-
-        Searches for .anatomize.yaml in the current directory and parent
-        directories up to the filesystem root.
-
-        Parameters
-        ----------
-        start_dir
-            Directory to start searching from. Defaults to current directory.
-
-        Returns
-        -------
-        SkeletonConfig or None
-            Loaded configuration or None if not found.
-        """
+    def find_config_path(cls, start_dir: Path | None = None) -> Path | None:
         if start_dir is None:
             start_dir = Path.cwd()
-
         current = start_dir.resolve()
-
         while True:
-            config_path = current / ".anatomize.yaml"
-            if config_path.exists():
-                return cls.from_file(config_path)
-
-            # Move to parent
+            candidate = current / ".anatomize.yaml"
+            if candidate.exists():
+                return candidate
             parent = current.parent
             if parent == current:
-                # Reached filesystem root
-                break
+                return None
             current = parent
 
-        return None
+    @classmethod
+    def find_config(cls, start_dir: Path | None = None) -> AnatomizeConfig | None:
+        p = cls.find_config_path(start_dir=start_dir)
+        if p is None:
+            return None
+        return cls.from_file(p)
 
     def to_yaml(self) -> str:
-        """Serialize configuration to YAML.
-
-        Returns
-        -------
-        str
-            YAML representation of the configuration.
-        """
         data: dict[str, Any] = {
-            "sources": self.sources,
             "output": self.output,
+            "sources": [
+                {
+                    "path": s.path,
+                    **({} if s.output is None else {"output": s.output}),
+                    **({} if s.level is None else {"level": s.level.value}),
+                    **({} if s.formats is None else {"formats": [f.value for f in s.formats]}),
+                    **({} if s.exclude is None else {"exclude": list(s.exclude)}),
+                    **({} if s.symlinks is None else {"symlinks": s.symlinks.value}),
+                    **({} if s.workers is None else {"workers": s.workers}),
+                }
+                for s in self.sources
+            ],
             "level": self.level.value,
             "formats": [f.value for f in self.formats],
-            "exclude": self.exclude,
+            "exclude": list(self.exclude),
             "symlinks": self.symlinks.value,
             "workers": self.workers,
         }
