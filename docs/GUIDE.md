@@ -205,8 +205,10 @@ If it cannot satisfy the cap, it fails.
 
 ### Token metrics
 `pack` reports:
-- **Artifact tokens**: exact tokens of the written output file(s).
-- **Content tokens**: tokens for file contents only (useful for budgeting per-file).
+- **Artifact tokens**: exact tokens of the written output file(s) (returned by the Python API).
+- **Content tokens**: tokens for file contents only (returned by the Python API; useful for budgeting per-file).
+
+Pack artifacts intentionally do **not** embed token counts (agents don’t need them; they waste tokens).
 
 Encoding is controlled by:
 - `--token-encoding` (default: `cl100k_base`)

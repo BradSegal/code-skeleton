@@ -31,7 +31,6 @@ class PackFile:
     language: str | None
     is_binary: bool
     content: str | None
-    content_tokens: int
 
 
 @dataclass(frozen=True)
@@ -40,7 +39,6 @@ class PackPayload:
     structure_paths: list[str]
     overview: dict[str, Any] | None
     files: list[PackFile]
-    content_total_tokens: int
     encoding_name: str
     compressed: bool
     content_encoding: ContentEncoding
@@ -123,14 +121,12 @@ def _render_json(payload: PackPayload) -> str:
         "encoding_name": payload.encoding_name,
         "compressed": payload.compressed,
         "content_encoding": payload.content_encoding.value,
-        "content_total_tokens": payload.content_total_tokens,
         "structure_paths": payload.structure_paths if payload.include_structure else [],
         "files": [
             {
                 "path": f.path,
                 "language": f.language,
                 "is_binary": f.is_binary,
-                "content_tokens": f.content_tokens,
                 "content_encoding": payload.content_encoding.value if payload.include_files else None,
                 "content": _encoded_content(f.content or "", payload.content_encoding)
                 if payload.include_files and not f.is_binary
@@ -139,7 +135,7 @@ def _render_json(payload: PackPayload) -> str:
             for f in payload.files
         ],
     }
-    return json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    return json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def _render_xml(payload: PackPayload) -> str:
@@ -148,7 +144,6 @@ def _render_xml(payload: PackPayload) -> str:
     root.set("encoding", payload.encoding_name)
     root.set("compressed", str(payload.compressed).lower())
     root.set("content_encoding", payload.content_encoding.value)
-    root.set("content_total_tokens", str(payload.content_total_tokens))
 
     if payload.overview is not None:
         overview = SubElement(root, "overview")
@@ -164,7 +159,6 @@ def _render_xml(payload: PackPayload) -> str:
     for f in payload.files:
         e = SubElement(files, "file")
         e.set("path", f.path)
-        e.set("content_tokens", str(f.content_tokens))
         if f.language:
             e.set("language", f.language)
         e.set("binary", str(f.is_binary).lower())
@@ -207,18 +201,27 @@ def render_prefix(
         lines: list[str] = []
         lines.append("# Code Pack")
         lines.append("")
+        lines.append("This is a deterministic, token-efficient snapshot for AI review.")
+        lines.append("")
+        lines.append("## How to use")
+        lines.append("- Start with **Structure** to understand the repository layout.")
+        lines.append("- Jump to **Files** to read specific paths.")
+        lines.append("- Binary files are listed but content is omitted.")
+        lines.append("- If this is too large/noisy, re-run with `--include/--ignore`, dependency slicing,")
+        lines.append("  or `--compress`.")
+        lines.append("")
+        lines.append("## Summary")
         lines.append(f"- Root: `{payload.root_name}`")
         lines.append(f"- Encoding: `{payload.encoding_name}`")
         lines.append(f"- Compressed: `{payload.compressed}`")
         lines.append(f"- Content encoding: `{payload.content_encoding.value}`")
-        lines.append(f"- Content tokens: `{payload.content_total_tokens}`")
-        if include_overview and payload.overview is not None:
-            lines.append("")
-            lines.append("## Overview")
-            lines.append("")
-            lines.append("```json")
-            lines.append(json.dumps(payload.overview, ensure_ascii=False, sort_keys=True, indent=2))
-            lines.append("```")
+        if include_overview and payload.overview is not None and payload.overview.get("selected") is not None:
+            sel = cast(dict[str, Any], payload.overview["selected"])
+            files = sel.get("files")
+            py = sel.get("python_files")
+            bin_ = sel.get("binary_files")
+            b = sel.get("total_bytes")
+            lines.append(f"- Selected: {files} files ({py} python, {bin_} binary), {b} bytes")
         lines.append("")
         if include_structure and payload.include_structure:
             lines.append("## Structure")
@@ -232,27 +235,32 @@ def render_prefix(
         return "\n".join(lines) + "\n"
 
     if fmt is PackFormat.PLAIN:
-        lines = [
-            f"ROOT: {payload.root_name}",
-            f"ENCODING: {payload.encoding_name}",
-            f"COMPRESSED: {payload.compressed}",
-            f"CONTENT_ENCODING: {payload.content_encoding.value}",
-            f"CONTENT_TOKENS: {payload.content_total_tokens}",
-            (
-                "OVERVIEW_JSON: "
-                + json.dumps(payload.overview, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-                if include_overview and payload.overview is not None
-                else "OVERVIEW_JSON: null"
-            ),
-            "",
-        ]
+        plain_lines: list[str] = []
+        plain_lines.append("CODE_PACK")
+        plain_lines.append("This is a deterministic, token-efficient snapshot for AI review.")
+        plain_lines.append("")
+        plain_lines.append(f"ROOT: {payload.root_name}")
+        plain_lines.append(f"ENCODING: {payload.encoding_name}")
+        plain_lines.append(f"COMPRESSED: {payload.compressed}")
+        plain_lines.append(f"CONTENT_ENCODING: {payload.content_encoding.value}")
+        if include_overview and payload.overview is not None and payload.overview.get("selected") is not None:
+            sel = cast(dict[str, Any], payload.overview["selected"])
+            plain_lines.append(
+                f"SELECTED: files={sel.get('files')} python={sel.get('python_files')} "
+                f"binary={sel.get('binary_files')} bytes={sel.get('total_bytes')}"
+            )
+        plain_lines.append("")
+        plain_lines.append("NOTES:")
+        plain_lines.append("- Structure is a tree of selected paths.")
+        plain_lines.append("- File contents follow; binary content is omitted.")
+        plain_lines.append("")
         if include_structure and payload.include_structure:
-            lines.append("STRUCTURE:")
-            lines.extend(payload.structure_paths)
-            lines.append("")
+            plain_lines.append("STRUCTURE:")
+            plain_lines.extend(payload.structure_paths)
+            plain_lines.append("")
         if payload.include_files:
-            lines.append("FILES:")
-        return "\n".join(lines) + "\n"
+            plain_lines.append("FILES:")
+        return "\n".join(plain_lines) + "\n"
 
     raise ValueError(f"Prefix rendering is only supported for markdown/plain: {fmt.value}")
 
@@ -267,10 +275,9 @@ def render_file_block(payload: PackPayload, *, fmt: PackFormat, file: PackFile) 
         lines.append(f"### {file.path}")
         lines.append("")
         if file.is_binary:
-            lines.append(f"_Binary file (content omitted). Content tokens: `{file.content_tokens}`_")
+            lines.append("_Binary file (content omitted)._")
             return "\n".join(lines) + "\n"
 
-        lines.append(f"_Content tokens: `{file.content_tokens}`_")
         if payload.content_encoding is ContentEncoding.BASE64:
             lines.append("")
             lines.append("_Content is base64-encoded UTF-8._")
@@ -296,7 +303,6 @@ def render_file_block(payload: PackPayload, *, fmt: PackFormat, file: PackFile) 
             "",
             "=" * 80,
             file.path,
-            f"CONTENT_TOKENS: {file.content_tokens}",
         ]
         if file.is_binary:
             lines.append("[BINARY CONTENT OMITTED]")

@@ -242,8 +242,10 @@ When `anatomize generate` runs from `.anatomize.yaml`, it writes one skeleton di
 Each pack artifact starts with a lightweight, deterministic overview (and, if enabled, a structure tree) before file blocks/records.
 
 Token reporting:
-- **Artifact tokens**: exact tokens of the written output file(s).
-- **Content tokens**: tokens of file contents only (useful for budgeting and “what’s expensive”).
+- **Artifact tokens**: exact tokens of the written output file(s) (returned by the Python API).
+- **Content tokens**: tokens of file contents only (returned by the Python API; useful for budgeting).
+
+Pack artifacts intentionally do **not** embed token counts (agents don’t need them; they waste tokens).
 
 ---
 

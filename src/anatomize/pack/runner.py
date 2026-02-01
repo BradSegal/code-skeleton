@@ -104,11 +104,7 @@ def _process_one_file(
     rel_posix = discovered.relative_posix
 
     if discovered.is_binary:
-        return (
-            rel_posix,
-            PackFile(path=rel_posix, language=None, is_binary=True, content=None, content_tokens=0),
-            None,
-        )
+        return (rel_posix, PackFile(path=rel_posix, language=None, is_binary=True, content=None), None)
 
     try:
         content = _read_text(abs_path)
@@ -125,7 +121,6 @@ def _process_one_file(
         language=_language_for_path(abs_path),
         is_binary=False,
         content=content,
-        content_tokens=0,
     )
     return rel_posix, pf, content
 
@@ -169,7 +164,7 @@ def _process_one_file_hybrid(
             content=None,
             content_field_tokens=None,
         )
-        pf = PackFile(path=rel_posix, language=None, is_binary=True, content=None, content_tokens=0)
+        pf = PackFile(path=rel_posix, language=None, is_binary=True, content=None)
         return jf, pf, 0, None, FileRepresentation.META
 
     language = _language_for_path(abs_path)
@@ -227,7 +222,6 @@ def _process_one_file_hybrid(
         language=language,
         is_binary=False,
         content=content if rep is FileRepresentation.CONTENT else None,
-        content_tokens=0,
     )
     return jf, pf, content_tokens, summary, rep
 
@@ -402,7 +396,6 @@ def pack(
                     language=_language_for_path(f.absolute_path),
                     is_binary=f.is_binary,
                     content=None,
-                    content_tokens=0,
                 )
             )
     else:
@@ -526,7 +519,6 @@ def pack(
             language=files_by_path[p].language,
             is_binary=files_by_path[p].is_binary,
             content=files_by_path[p].content,
-            content_tokens=token_counts.per_file_content_tokens.get(p, 0),
         )
         for p in sorted(files_by_path.keys())
     ]
@@ -548,14 +540,12 @@ def pack(
         selected_rel_paths=selected_rel_paths,
         size_by_rel=size_by_rel,
         is_binary_by_rel=is_binary_by_rel,
-        content_total_tokens=token_counts.content_total_tokens,
     )
     payload = PackPayload(
         root_name=root.name,
         structure_paths=structure_paths,
         overview=overview,
         files=files,
-        content_total_tokens=token_counts.content_total_tokens,
         encoding_name=token_encoding,
         compressed=compress,
         content_encoding=content_encoding,
@@ -1338,7 +1328,7 @@ def _jsonl_files_from_payload(
                 language=pf.language,
                 is_binary=pf.is_binary,
                 size_bytes=size_by_rel.get(pf.path, 0),
-                content_tokens=pf.content_tokens,
+                content_tokens=0,
                 representation=rep,
                 summary=None,
                 content_encoding=payload.content_encoding if content is not None else None,

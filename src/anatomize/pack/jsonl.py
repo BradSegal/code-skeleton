@@ -50,7 +50,6 @@ def iter_jsonl_prefix(
         "encoding_name": payload.encoding_name,
         "compressed": payload.compressed,
         "content_encoding": payload.content_encoding.value,
-        "content_total_tokens": payload.content_total_tokens,
         "line_numbers": payload.line_numbers,
         "structure_included": structure_included,
         "include_files": payload.include_files,
@@ -94,12 +93,10 @@ def _file_record(payload: PackPayload, f: JsonlFile) -> dict[str, Any]:
         "language": f.language,
         "is_binary": f.is_binary,
         "size_bytes": f.size_bytes,
-        "content_tokens": f.content_tokens,
         "representation": f.representation.value,
         "summary": f.summary,
         "content_encoding": content_encoding,
         "content": content,
-        "content_field_tokens": f.content_field_tokens,
     }
 
 

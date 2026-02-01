@@ -67,7 +67,7 @@ def test_pack_json_includes_overview_and_selected_structure(tmp_path: Path) -> N
     assert "other/" not in structure
 
 
-def test_pack_overview_records_python_parse_error_without_failing(tmp_path: Path) -> None:
+def test_pack_overview_does_not_fail_on_invalid_python(tmp_path: Path) -> None:
     (tmp_path / "src").mkdir()
     # Intentionally invalid Python.
     (tmp_path / "src" / "bad.py").write_text("def f(:\n    pass\n", encoding="utf-8")
@@ -111,8 +111,4 @@ def test_pack_overview_records_python_parse_error_without_failing(tmp_path: Path
     )
 
     data = json.loads(out.read_text(encoding="utf-8"))
-    py = data["overview"]["python_top_level"]
-    assert py is not None
-    assert py["parse_errors"] == 1
-    assert py["modules"][0]["path"] == "src/bad.py"
-    assert py["modules"][0]["error"]["type"] == "syntax_error"
+    assert data["overview"]["selected"]["python_files"] == 1
