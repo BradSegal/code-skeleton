@@ -123,7 +123,7 @@ class TestFormatFunction:
         """Test that async functions are marked."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="1.0.0rc1",
+                generator_version="1.0.0",
                 sources=["/test"],
                 resolution=ResolutionLevel.SIGNATURES,
             ),
@@ -144,7 +144,7 @@ class TestFormatFunction:
         """Test that function decorators are shown."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="1.0.0rc1",
+                generator_version="1.0.0",
                 sources=["/test"],
                 resolution=ResolutionLevel.SIGNATURES,
             ),
@@ -171,7 +171,7 @@ class TestResolutionLevels:
         """Test output at hierarchy resolution level."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="1.0.0rc1",
+                generator_version="1.0.0",
                 sources=["/test"],
                 resolution=ResolutionLevel.HIERARCHY,
             ),
@@ -202,7 +202,7 @@ class TestEdgeCases:
         """Test formatting module with no classes or functions."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="1.0.0rc1",
+                generator_version="1.0.0",
                 sources=["/test"],
                 resolution=ResolutionLevel.MODULES,
             ),
@@ -223,7 +223,7 @@ class TestEdgeCases:
         """Test formatting class with no methods."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="1.0.0rc1",
+                generator_version="1.0.0",
                 sources=["/test"],
                 resolution=ResolutionLevel.SIGNATURES,
             ),

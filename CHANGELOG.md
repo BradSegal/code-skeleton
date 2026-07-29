@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.0.0 - 2026-07-29
+
+The validated `1.0.0rc1` implementation is promoted unchanged as the first
+stable release.
+
 ## 1.0.0rc1 - 2026-07-29
 
 ### Added
