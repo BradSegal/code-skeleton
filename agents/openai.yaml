@@ -1,0 +1,4 @@
+interface:
+  display_name: "Anatomize"
+  short_description: "Map repository context and code impact"
+  default_prompt: "Use Anatomize to orient to this repository, identify the exact implementation owner and affected context, and return portable evidence before making changes."

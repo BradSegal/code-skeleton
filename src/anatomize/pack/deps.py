@@ -9,10 +9,25 @@ This is intentionally strict:
 from __future__ import annotations
 
 import ast
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 
 from anatomize.core.policy import SymlinkPolicy
+
+_EXCLUDED_PARTS = {
+    ".anatomy",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".runtime",
+    ".tox",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+}
 
 
 @dataclass(frozen=True)
@@ -61,6 +76,10 @@ class PythonModuleIndex:
             if not root.exists() or not root.is_dir():
                 raise ValueError(f"Python root must be an existing directory: {root}")
             for p in sorted(root.rglob("*.py")):
+                if any(part in _EXCLUDED_PARTS for part in p.relative_to(root).parts):
+                    continue
+                if any(part.endswith(".egg-info") for part in p.relative_to(root).parts):
+                    continue
                 if p.is_symlink():
                     if p.is_file() and symlinks not in (SymlinkPolicy.FILES, SymlinkPolicy.ALL):
                         continue
@@ -205,6 +224,29 @@ def dependency_closure(entry_files: list[Path], *, index: PythonModuleIndex) -> 
     return sorted(seen)
 
 
+def dependency_distances(
+    entry_files: list[Path],
+    *,
+    index: PythonModuleIndex,
+) -> dict[Path, int]:
+    """Return shortest static-import distance from entry files."""
+    closure = set(dependency_closure(entry_files, index=index))
+    adjacency: dict[Path, set[Path]] = {}
+    for module in index.modules():
+        targets = {
+            resolved.path
+            for imported in _extract_imported_modules(module, index=index)
+            if (resolved := index.resolve_module(imported)) is not None
+        }
+        targets.update(item.path for item in index.package_inits_for(module.module))
+        adjacency[module.path] = targets
+    return _shortest_distances(
+        starts={index.module_for_path(path).path for path in entry_files},
+        adjacency=adjacency,
+        eligible=closure,
+    )
+
+
 def reverse_dependency_closure(target_module: str, *, index: PythonModuleIndex) -> list[Path]:
     """Return the reverse import closure for a target module/package.
 
@@ -240,6 +282,52 @@ def reverse_dependency_closure(target_module: str, *, index: PythonModuleIndex) 
         if found is not None:
             paths.append(found.path)
     return sorted(set(paths))
+
+
+def reverse_dependency_distances(
+    target_module: str,
+    *,
+    index: PythonModuleIndex,
+) -> dict[Path, int]:
+    """Return shortest reverse-import distance from a target module/package."""
+    closure = set(reverse_dependency_closure(target_module, index=index))
+    target_paths = {
+        module.path
+        for module in index.modules()
+        if module.module == target_module or module.module.startswith(target_module + ".")
+    }
+    imported_by = _build_reverse_import_index(index)
+    adjacency: dict[Path, set[Path]] = {}
+    for imported, importers in imported_by.items():
+        imported_module = index.resolve_module(imported)
+        if imported_module is None:
+            continue
+        adjacency.setdefault(imported_module.path, set()).update(
+            module.path for importer in importers if (module := index.resolve_module(importer)) is not None
+        )
+    return _shortest_distances(
+        starts=target_paths,
+        adjacency=adjacency,
+        eligible=closure,
+    )
+
+
+def _shortest_distances(
+    *,
+    starts: set[Path],
+    adjacency: dict[Path, set[Path]],
+    eligible: set[Path],
+) -> dict[Path, int]:
+    distances = {path: 0 for path in starts}
+    queue = deque(sorted(starts))
+    while queue:
+        current = queue.popleft()
+        for adjacent in sorted(adjacency.get(current, set())):
+            if adjacent not in eligible or adjacent in distances:
+                continue
+            distances[adjacent] = distances[current] + 1
+            queue.append(adjacent)
+    return distances
 
 
 def _build_reverse_import_index(index: PythonModuleIndex) -> dict[str, set[str]]:

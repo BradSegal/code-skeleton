@@ -28,7 +28,7 @@ def minimal_skeleton() -> Skeleton:
     """Create a minimal valid Skeleton for testing."""
     return Skeleton(
         metadata=SkeletonMetadata(
-            generator_version="0.2.0",
+            generator_version="1.0.0rc1",
             sources=["/test/src"],
             resolution=ResolutionLevel.MODULES,
             total_packages=1,
@@ -54,7 +54,7 @@ def skeleton_with_classes() -> Skeleton:
     """Create a Skeleton with sample classes and functions."""
     return Skeleton(
         metadata=SkeletonMetadata(
-            generator_version="0.2.0",
+            generator_version="1.0.0rc1",
             sources=["/test/src"],
             resolution=ResolutionLevel.SIGNATURES,
             total_packages=1,

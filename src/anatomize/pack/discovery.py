@@ -52,7 +52,8 @@ class DiscoveryTraceItem:
         Either 'included' or 'excluded'.
     reason
         Why excluded: 'ignore' (matched ignore pattern), 'include'
-        (not in include list), or None for included files.
+        (not in include list), 'symlink', 'broken_symlink', or None for
+        included files.
     matched_pattern
         The pattern that matched (for ignore exclusions).
     matched_source
@@ -62,7 +63,7 @@ class DiscoveryTraceItem:
     path: str
     is_dir: bool
     decision: str  # "included" or "excluded"
-    reason: str | None  # "ignore" | "include" | None
+    reason: str | None
     matched_pattern: str | None
     matched_source: str | None
 
@@ -73,13 +74,14 @@ def discover_paths(
     excluder: Excluder,
     include_patterns: list[str] | None,
     symlinks: SymlinkPolicy,
-    max_file_bytes: int,
     trace: list[DiscoveryTraceItem] | None = None,
 ) -> list[DiscoveredPath]:
     """Discover all files and directories in a repository.
 
     Performs deterministic, depth-first traversal with filtering based
-    on ignore patterns, include patterns, symlink policy, and size limits.
+    on ignore patterns, include patterns, and symlink policy. File sizes are
+    recorded here and enforced by the caller after task selection so an
+    unrelated large file cannot block a focused slice.
 
     Parameters
     ----------
@@ -91,8 +93,6 @@ def discover_paths(
         Optional allowlist of glob patterns (files not matching are excluded).
     symlinks
         Policy for following symbolic links.
-    max_file_bytes
-        Maximum file size in bytes (0 for unlimited).
     trace
         Optional list to receive discovery decision traces.
 
@@ -104,7 +104,7 @@ def discover_paths(
     Raises
     ------
     ValueError
-        If root doesn't exist, isn't a directory, or a file exceeds max size.
+        If root doesn't exist or isn't a directory.
     """
     root = root.resolve()
     if not root.exists() or not root.is_dir():
@@ -120,9 +120,36 @@ def discover_paths(
         for entry in entries:
             is_symlink = entry.is_symlink()
             if is_symlink:
-                if entry.is_dir() and symlinks not in (SymlinkPolicy.DIRS, SymlinkPolicy.ALL):
+                if not entry.exists():
+                    if trace is not None:
+                        trace.append(
+                            DiscoveryTraceItem(
+                                path=(f"{rel_dir_posix}/{entry.name}" if rel_dir_posix else entry.name),
+                                is_dir=False,
+                                decision="excluded",
+                                reason="broken_symlink",
+                                matched_pattern=None,
+                                matched_source=None,
+                            )
+                        )
                     continue
-                if entry.is_file() and symlinks not in (SymlinkPolicy.FILES, SymlinkPolicy.ALL):
+                is_link_dir = entry.is_dir()
+                is_link_file = entry.is_file()
+                permitted = (is_link_dir and symlinks in (SymlinkPolicy.DIRS, SymlinkPolicy.ALL)) or (
+                    is_link_file and symlinks in (SymlinkPolicy.FILES, SymlinkPolicy.ALL)
+                )
+                if not permitted:
+                    if trace is not None:
+                        trace.append(
+                            DiscoveryTraceItem(
+                                path=(f"{rel_dir_posix}/{entry.name}" if rel_dir_posix else entry.name),
+                                is_dir=is_link_dir,
+                                decision="excluded",
+                                reason="symlink",
+                                matched_pattern=None,
+                                matched_source=None,
+                            )
+                        )
                     continue
 
             rel = f"{rel_dir_posix}/{entry.name}" if rel_dir_posix else entry.name
@@ -184,9 +211,10 @@ def discover_paths(
                 walk_dir(entry, rel_posix)
                 continue
 
-            size = entry.stat().st_size
-            if max_file_bytes > 0 and size > max_file_bytes:
-                raise ValueError(f"File exceeds max size ({max_file_bytes} bytes): {rel_posix} ({size} bytes)")
+            try:
+                size = entry.stat().st_size
+            except OSError as e:
+                raise ValueError(f"Failed to stat file: {rel_posix}") from e
 
             is_binary = _is_binary_file(entry)
             results.append(

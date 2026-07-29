@@ -11,7 +11,7 @@ import subprocess
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from queue import Queue
+from queue import Empty, Queue
 from time import sleep
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -98,7 +98,7 @@ def pyright_referenced_files(
                 continue
             try:
                 text = doc_path.read_text(encoding="utf-8")
-            except Exception:
+            except (OSError, UnicodeError):
                 continue
             client.notify(
                 "textDocument/didOpen",
@@ -122,7 +122,7 @@ def pyright_referenced_files(
                 "textDocument/documentSymbol",
                 {"textDocument": {"uri": target_uri}},
             )
-        except Exception:
+        except ValueError:
             # Some pyright versions may not support this; references are still the source of truth.
             pass
 
@@ -188,7 +188,7 @@ def _uri_to_path(uri: str) -> Path | None:
 
     try:
         return Path(path).resolve()
-    except Exception:
+    except (OSError, RuntimeError):
         return None
 
 
@@ -245,16 +245,16 @@ class _LspClient:
         try:
             try:
                 self.request("shutdown", {})
-            except Exception:
+            except ValueError:
                 pass
             try:
                 self.notify("exit", {})
-            except Exception:
+            except ValueError:
                 pass
         finally:
             try:
                 self._proc.kill()
-            except Exception:
+            except OSError:
                 pass
             self._proc = None
 
@@ -268,7 +268,7 @@ class _LspClient:
         self._send({"jsonrpc": "2.0", "id": req_id, "method": method, "params": params})
         try:
             resp = q.get(timeout=self._timeout_seconds)
-        except Exception as e:
+        except Empty as e:
             raise ValueError(f"pyright-lsp timed out waiting for response to {method}") from e
         if "error" in resp and resp["error"] is not None:
             raise ValueError(f"pyright-lsp error for {method}: {resp['error']}")
@@ -289,8 +289,10 @@ class _LspClient:
             raise ValueError("pyright language server connection closed") from e
 
     def _reader_loop(self) -> None:
-        assert self._proc is not None and self._proc.stdout is not None
-        stream = self._proc.stdout
+        process = self._proc
+        if process is None or process.stdout is None:
+            return
+        stream = process.stdout
         while True:
             headers = _read_headers(stream)
             if headers is None:
@@ -303,7 +305,7 @@ class _LspClient:
                 return
             try:
                 msg = json.loads(body.decode("utf-8"))
-            except Exception:
+            except (UnicodeDecodeError, json.JSONDecodeError):
                 continue
             if isinstance(msg, dict) and "id" in msg and isinstance(msg["id"], int):
                 req_id = msg["id"]
@@ -313,12 +315,14 @@ class _LspClient:
                     q.put(msg)
 
     def _drain_stderr(self) -> None:
-        assert self._proc is not None and self._proc.stderr is not None
+        process = self._proc
+        if process is None or process.stderr is None:
+            return
         try:
-            while self._proc.stderr.read(4096):
+            while process.stderr.read(4096):
                 pass
-        except Exception:
-            pass
+        except OSError:
+            return
 
 
 def _read_headers(stream: Any) -> dict[str, str] | None:

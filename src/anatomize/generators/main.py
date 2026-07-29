@@ -146,7 +146,7 @@ class SkeletonGenerator:
                             source=discovered.source,
                         )
                         return module_name, info
-                    except Exception as e:
+                    except (OSError, UnicodeError, ValueError) as e:
                         raise ValueError(f"Failed to extract {module_name} from {discovered.absolute_path}") from e
 
                 errors: list[str] = []
@@ -157,7 +157,7 @@ class SkeletonGenerator:
                         try:
                             mod_name, info = fut.result()
                             results[mod_name] = info
-                        except Exception as e:
+                        except ValueError as e:
                             errors.append(str(e))
 
                 if errors:

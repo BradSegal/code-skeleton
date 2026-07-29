@@ -4,12 +4,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
-Generate deterministic, token-efficient maps and review bundles for Python repositories.
+Build deterministic, token-efficient repository maps, impact reports, and
+review bundles for rapid agent development.
 
-`anatomize` has two complementary workflows:
+`anatomize` has three complementary workflows:
 
-1) **Skeletons**: structure-only “code maps” for navigation and architecture understanding.
-2) **Packs**: single-file bundles ([repomix](https://repomix.com/)-style) for external review, with filtering and slicing.
+1. **Repository intelligence**: portable symbol indexes, definition lookup,
+   static dependency impact, and Git-diff impact.
+2. **Skeletons**: structure-only code maps for persistent navigation.
+3. **Packs**: bounded review bundles with filtering, slicing, and explicit
+   selection provenance.
 
 If you want the full guide (modes, slicing, config, determinism guarantees), see `docs/GUIDE.md`.
 
@@ -24,6 +28,30 @@ pip install anatomize
 ---
 
 ## Quick Start (CLI)
+
+### Orient and assess impact
+
+```bash
+# Build a portable source-bound index
+anatomize index . --output .anatomy/index.json
+
+# Locate the canonical definition
+anatomize find RepositoryIndex --root . --index .anatomy/index.json
+
+# Explain focus, dependencies, importers, tests, docs, and configuration
+anatomize impact RepositoryIndex --root . --index .anatomy/index.json \
+  --output /tmp/repository-index-impact.json
+
+# Assess the current working tree against an explicit Git base
+anatomize changed --base origin/main --root . --output /tmp/changed-impact.json
+
+# Validate every configured skeleton, pack, and stored index
+anatomize check .
+```
+
+Repository indexes provide Python semantic edges. R and other files remain
+visible as supporting context in v1, but are not assigned invented symbol or
+dependency precision.
 
 ### Generate skeletons
 
@@ -100,7 +128,7 @@ anatomize pack . --compress --output compressed.md
 # Make markdown robust to embedded ``` fences (default)
 anatomize pack . --content-encoding fence-safe --output safe.md
 
-# Maximum robustness (content is base64-encoded UTF-8)
+# Base64 transport isolation (content remains untrusted repository input)
 anatomize pack . --content-encoding base64 --output safe.base64.md
 
 # Split output into multiple files (markdown/plain only)
@@ -247,7 +275,7 @@ When `anatomize generate` runs from `.anatomize.yaml`, it writes one skeleton di
 - `anatomize-pack.md` (or `.txt|.json|.xml`)
 - if split: `anatomize-pack.1.md`, `anatomize-pack.2.md`, …
 
-Each pack artifact starts with a lightweight, deterministic overview (and, if enabled, a structure tree) before file blocks/records.
+Each pack artifact starts with a lightweight, deterministic overview (and, if enabled, a structure tree) before file blocks/records. Outputs, split parts, reports, and temporary writes are excluded from their own input boundary.
 
 Token reporting:
 - **Artifact tokens**: exact tokens of the written output file(s) (returned by the Python API).
@@ -263,6 +291,9 @@ Pack artifacts intentionally do **not** embed token counts (agents don’t need 
 - No timestamps in outputs.
 - Parse failures are hard failures (no partial output).
 - Validation is strict; `--fix` replaces output with regenerated content.
+- Invalid selection requests fail before traversal.
+- File-size limits apply after task selection.
+- Expected CLI errors are concise; `--verbose` enables diagnostic tracebacks.
 
 ---
 

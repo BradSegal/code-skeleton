@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from anatomize.core.parser import PythonParser
+from anatomize.core.parser import PythonParser, docstring_first_line
 from anatomize.core.types import (
     AttributeInfo,
     ClassInfo,
@@ -152,39 +152,12 @@ class SymbolExtractor:
                 string_node = self._parser.find_first(child, "string")
                 if string_node is not None:
                     text = self._parser.get_node_text(string_node)
-                    return self._extract_first_line(text)
+                    return docstring_first_line(text)
                 break
             # Skip comments and other statements
             if child.type not in ("comment",):
                 break
         return None
-
-    def _extract_first_line(self, text: str) -> str:
-        """Extract first line from a docstring.
-
-        Parameters
-        ----------
-        text
-            Full docstring text including quotes.
-
-        Returns
-        -------
-        str
-            First meaningful line of the docstring.
-        """
-        # Remove quotes
-        if text.startswith('"""') or text.startswith("'''"):
-            text = text[3:-3]
-        elif text.startswith('"') or text.startswith("'"):
-            text = text[1:-1]
-
-        # Get first non-empty line
-        lines = text.strip().split("\n")
-        for line in lines:
-            line = line.strip()
-            if line:
-                return line
-        return ""
 
     def _extract_class(self, node: Node) -> ClassInfo | None:
         """Extract class information.

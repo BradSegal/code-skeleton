@@ -14,9 +14,8 @@ authors = [
 ]
 keywords = ["ast", "code-analysis", "llm", "ai", "tree-sitter", "skeleton", "pack", "bundle"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -45,6 +44,7 @@ dev = [
     "types-PyYAML",
     "build",
     "twine",
+    "check-wheel-contents",
 ]
 
 [project.scripts]
@@ -57,6 +57,23 @@ Repository = "https://github.com/BradSegal/anatomize"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/anatomize"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/.anatomize.yaml",
+    "/.github/workflows",
+    "/agents",
+    "/docs",
+    "/scripts",
+    "/src",
+    "/tests",
+    "/CHANGELOG.md",
+    "/CONTRIBUTING.md",
+    "/LICENSE",
+    "/README.md",
+    "/SKILL.md",
+    "/pyproject.toml",
+]
 
 [tool.hatch.version]
 path = "src/anatomize/version.py"

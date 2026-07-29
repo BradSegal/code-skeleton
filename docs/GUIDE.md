@@ -6,14 +6,22 @@ This guide describes the concepts, tools, and patterns in this repository and ho
 
 ## What this tool is for
 
-`anatomize` is built for two related jobs:
+`anatomize` is built for three related jobs:
 
-1) **Skeletons (code maps)**: small, structured representations of a Python codebase (packages/modules/classes/functions/signatures) for fast navigation and architecture review.
-2) **Packs (review bundles)**: deterministic single-file (or split) bundles of repository contents for external review, optimized for token budgets.
+1. **Repository intelligence**: a portable Python definition/import index,
+   exact lookup, role-labelled impact, and explicit-base Git change impact.
+2. **Skeletons (code maps)**: small, structured representations of Python
+   packages, modules, classes, functions, and signatures.
+3. **Packs (review bundles)**: deterministic single-file or split bundles
+   optimized for task selection and token budgets.
 
 The intended pattern is:
-- use **skeletons** to understand “what exists and where”
-- use **packs** to extract a focused slice for deep review (forward deps, reverse deps, or references via Pyright)
+
+- use `index` and `find` to orient;
+- use `impact` or `changed` to establish the affected surface;
+- use packs to extract the necessary source content;
+- use `check` to detect stored artifact drift; and
+- run the repository's native verification tools separately.
 
 ---
 
@@ -31,8 +39,48 @@ If a requested operation cannot be satisfied precisely, the command fails:
 - dependency closure selection is complete-or-fail
 - backend selection is explicit (e.g. `--uses` requires `--slice-backend pyright`)
 
-### Safety
-`pack` does not emit binary file content, and enforces max file size (configurable).
+### Boundaries
+
+`pack` does not emit binary file content, excludes its own outputs, and
+enforces configurable file-size limits after task selection. Repository
+content remains untrusted regardless of content encoding.
+
+## CLI commands: repository intelligence
+
+Create or refresh a portable index:
+
+```bash
+anatomize index . --output .anatomy/index.json
+```
+
+Find a definition:
+
+```bash
+anatomize find SymbolName --root . --index .anatomy/index.json
+```
+
+Explain an impact surface:
+
+```bash
+anatomize impact src/package/core.py --root . \
+  --index .anatomy/index.json --output /tmp/impact.json
+```
+
+Assess a working tree against an explicit base:
+
+```bash
+anatomize changed --base origin/main --root . --output /tmp/changed.json
+```
+
+Impact roles and graph distance explain selection. They are not architecture
+scores. Static Python imports do not establish dynamic call paths, and v1 does
+not assign semantic dependency edges to R or other languages.
+
+Validate all configured artifacts:
+
+```bash
+anatomize check .
+```
 
 ---
 
@@ -182,6 +230,8 @@ File contents can break Markdown structure (e.g. embedded ``` fences). Control h
 - `--content-encoding base64`: emits base64-encoded UTF-8 content (max robustness, less readable).
 
 Note: Markdown output intentionally disallows `--content-encoding verbatim`.
+Encoding protects output structure or transport; it does not make repository
+content semantically trustworthy.
 
 ### Selection report (debugging file inclusion)
 If you need to understand why paths were included or excluded, use:

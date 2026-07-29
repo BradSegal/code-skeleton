@@ -101,7 +101,7 @@ class TestUriToPath:
 
     def test_empty_authority(self) -> None:
         """Test file URI with empty authority."""
-        p = _uri_to_path("file:///home/user/file.py")
+        p = _uri_to_path("file:///opt/example/file.py")
         assert p is not None
         assert "file.py" in str(p)
 

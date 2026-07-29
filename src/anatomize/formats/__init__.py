@@ -6,7 +6,6 @@ various output formats (YAML, JSON, Markdown).
 
 from __future__ import annotations
 
-import os
 from enum import Enum
 from importlib.resources import files
 from pathlib import Path
@@ -130,8 +129,10 @@ def _render_sources_relative_to(skeleton: Skeleton, base_dir: Path) -> Skeleton:
         if not src.is_absolute():
             raise ValueError(f"metadata.sources must contain absolute paths, got: {s}")
         src = src.resolve()
-        rel = os.path.relpath(src, base_dir)
-        rendered_sources.append(Path(rel).as_posix())
+        if src.is_relative_to(base_dir):
+            rendered_sources.append(src.relative_to(base_dir).as_posix() or ".")
+        else:
+            rendered_sources.append(f"external:{src.name}")
     return skeleton.model_copy(update={"metadata": skeleton.metadata.model_copy(update={"sources": rendered_sources})})
 
 

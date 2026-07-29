@@ -6,15 +6,28 @@ import base64
 import json
 import os
 import tempfile
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 from anatomize.core.exclude import Excluder
 from anatomize.core.policy import SymlinkPolicy
+from anatomize.pack.boundaries import (
+    enforce_selected_file_sizes,
+    is_within,
+    output_ignore_patterns,
+    validate_pack_request,
+)
 from anatomize.pack.compress import compress_python_file
-from anatomize.pack.deps import PythonModuleIndex, dependency_closure, reverse_dependency_closure
+from anatomize.pack.deps import (
+    PythonModuleIndex,
+    dependency_closure,
+    dependency_distances,
+    reverse_dependency_closure,
+    reverse_dependency_distances,
+)
 from anatomize.pack.discovery import DiscoveredPath, DiscoveryTraceItem, discover_paths
 from anatomize.pack.formats import (
     ContentEncoding,
@@ -87,6 +100,27 @@ class PackResult:
 
 
 @dataclass(frozen=True)
+class PackSelection:
+    """Files and provenance selected for one pack."""
+
+    files: list[DiscoveredPath]
+    roles: dict[Path, tuple[str, int]]
+    python_roots: list[Path]
+    size_by_path: dict[str, int]
+    binary_by_path: dict[str, bool]
+
+
+@dataclass(frozen=True)
+class MaterializedFiles:
+    """Rendered file records before repository-level framing."""
+
+    files: list[PackFile]
+    jsonl_files: list[JsonlFile]
+    payload_by_path: dict[str, str]
+    token_counts: TokenCounts
+
+
+@dataclass(frozen=True)
 class _RenderedBlock:
     file: object
     text: str
@@ -103,6 +137,7 @@ class _StagedArtifact:
 
 
 HybridProcessResult = tuple[JsonlFile, PackFile, int, dict[str, Any] | None, FileRepresentation]
+ProcessResult = TypeVar("ProcessResult")
 
 
 def _resolve_workers(requested: int, n_items: int) -> int:
@@ -139,7 +174,7 @@ def _process_one_file(
             content = compress_python_file(abs_path, module_name=module_name, relative_posix=rel_posix)
         if line_numbers:
             content = _add_line_numbers(content)
-    except Exception as e:
+    except (OSError, UnicodeError, ValueError) as e:
         raise ValueError(f"Failed to process {rel_posix}") from e
 
     pf = PackFile(
@@ -217,7 +252,7 @@ def _process_one_file_hybrid(
 
     try:
         raw_text = _read_text(abs_path)
-    except Exception as e:
+    except (OSError, UnicodeError) as e:
         raise ValueError(f"Failed to read {rel_posix}") from e
 
     content_tokens = count_tokens(raw_text, encoding_name=token_encoding)
@@ -284,6 +319,444 @@ def _process_one_file_hybrid(
         ),
     )
     return jf, pf, content_tokens, summary, rep
+
+
+def _select_pack_files(
+    *,
+    root: Path,
+    out_path: Path,
+    include: list[str],
+    ignore: list[str],
+    ignore_files: list[Path],
+    respect_standard_ignores: bool,
+    symlinks: SymlinkPolicy,
+    max_file_bytes: int,
+    selection_report_output: Path | None,
+    mode: PackMode,
+    entries: list[Path],
+    deps: bool,
+    target: Path | None,
+    target_module: str | None,
+    reverse_deps: bool,
+    uses: bool,
+    uses_include_private: bool,
+    slice_backend: SliceBackend,
+    pyright_langserver_cmd: list[str] | None,
+    python_roots: list[Path],
+) -> PackSelection:
+    """Discover files and apply dependency-aware selection."""
+    output_ignores = output_ignore_patterns(
+        root,
+        output=out_path,
+        selection_report=selection_report_output,
+    )
+    excluder = build_excluder(
+        root,
+        ignore=[*ignore, *output_ignores],
+        ignore_files=ignore_files,
+        respect_standard_ignores=respect_standard_ignores,
+    )
+    trace: list[DiscoveryTraceItem] | None = [] if selection_report_output is not None else None
+    discovered = discover_paths(
+        root,
+        excluder=excluder,
+        include_patterns=include if include else None,
+        symlinks=symlinks,
+        trace=trace,
+    )
+    file_paths = [item for item in discovered if not item.is_dir]
+    discovered_files = {item.absolute_path for item in file_paths}
+    resolved_python_roots = _resolve_python_roots(root, python_roots or _default_python_roots(root))
+    selected_files: set[Path] | None = None
+    selection_roles: dict[Path, tuple[str, int]] = {}
+
+    if entries:
+        resolved_entries = [(root / path).resolve() if not path.is_absolute() else path.resolve() for path in entries]
+        selected_files, selection_roles = _select_from_entries(
+            resolved_entries,
+            include_dependencies=deps,
+            python_roots=resolved_python_roots,
+            symlinks=symlinks,
+        )
+    elif target is not None or target_module is not None:
+        selected_files, selection_roles = _select_from_target(
+            root=root,
+            target=target,
+            target_module=target_module,
+            reverse_deps=reverse_deps,
+            uses=uses,
+            uses_include_private=uses_include_private,
+            deps=deps,
+            slice_backend=slice_backend,
+            pyright_langserver_cmd=pyright_langserver_cmd,
+            python_roots=resolved_python_roots,
+            symlinks=symlinks,
+        )
+
+    if selected_files is not None:
+        _ensure_required_files_included(
+            root,
+            required=selected_files,
+            discovered_files=discovered_files,
+            include_patterns=include,
+            excluder=excluder,
+            symlinks=symlinks,
+        )
+    selected = [item for item in file_paths if selected_files is None or item.absolute_path in selected_files]
+    enforce_selected_file_sizes(selected, max_file_bytes=max_file_bytes)
+    if selection_report_output is not None:
+        _write_selection_report(
+            selection_report_output,
+            root=root,
+            root_name=root.name,
+            include_patterns=include,
+            excluder=excluder,
+            respect_standard_ignores=respect_standard_ignores,
+            ignore_files=ignore_files,
+            symlinks=symlinks,
+            max_file_bytes=max_file_bytes,
+            mode=mode,
+            entries=entries,
+            deps=deps,
+            target=target,
+            target_module=target_module,
+            reverse_deps=reverse_deps,
+            uses=uses,
+            slice_backend=slice_backend,
+            discovered_files=file_paths,
+            selected_files=selected,
+            selection_roles=selection_roles,
+            trace=trace or [],
+        )
+    return PackSelection(
+        files=selected,
+        roles=selection_roles,
+        python_roots=resolved_python_roots,
+        size_by_path={item.relative_posix: item.size_bytes for item in selected},
+        binary_by_path={item.relative_posix: item.is_binary for item in selected},
+    )
+
+
+def _select_from_entries(
+    entries: list[Path],
+    *,
+    include_dependencies: bool,
+    python_roots: list[Path],
+    symlinks: SymlinkPolicy,
+) -> tuple[set[Path], dict[Path, tuple[str, int]]]:
+    """Select entry files and, when requested, their import closure."""
+    if not include_dependencies:
+        return set(entries), {path: ("focus", 0) for path in entries}
+    index = PythonModuleIndex(python_roots, symlinks=symlinks)
+    roles = {
+        path: ("focus" if distance == 0 else "dependency", distance)
+        for path, distance in dependency_distances(entries, index=index).items()
+    }
+    return set(dependency_closure(entries, index=index)), roles
+
+
+def _select_from_target(
+    *,
+    root: Path,
+    target: Path | None,
+    target_module: str | None,
+    reverse_deps: bool,
+    uses: bool,
+    uses_include_private: bool,
+    deps: bool,
+    slice_backend: SliceBackend,
+    pyright_langserver_cmd: list[str] | None,
+    python_roots: list[Path],
+    symlinks: SymlinkPolicy,
+) -> tuple[set[Path], dict[Path, tuple[str, int]]]:
+    """Select one target, its importers, semantic references, or dependencies."""
+    index = PythonModuleIndex(python_roots, symlinks=symlinks)
+    target_mod = (
+        index.module_for_path((root / target).resolve() if not target.is_absolute() else target.resolve()).module
+        if target is not None
+        else target_module or ""
+    )
+    selected: set[Path] = set()
+    roles: dict[Path, tuple[str, int]] = {}
+    if reverse_deps:
+        selected.update(reverse_dependency_closure(target_mod, index=index))
+        roles.update(
+            {
+                path: ("focus" if distance == 0 else "importer", distance)
+                for path, distance in reverse_dependency_distances(target_mod, index=index).items()
+            }
+        )
+    if uses:
+        _add_pyright_references(
+            root=root,
+            target_module=target_mod,
+            index=index,
+            selected=selected,
+            roles=roles,
+            include_private=uses_include_private,
+            slice_backend=slice_backend,
+            langserver_cmd=pyright_langserver_cmd,
+            python_roots=python_roots,
+        )
+    if deps:
+        resolved = index.resolve_module(target_mod)
+        if resolved is None:
+            raise ValueError(f"Unknown target module: {target_mod}")
+        start = sorted(selected) if selected else [resolved.path]
+        selected.update(dependency_closure(start, index=index))
+        for path, distance in dependency_distances(start, index=index).items():
+            roles.setdefault(path, ("focus" if distance == 0 else "dependency", distance))
+    return selected, roles
+
+
+def _add_pyright_references(
+    *,
+    root: Path,
+    target_module: str,
+    index: PythonModuleIndex,
+    selected: set[Path],
+    roles: dict[Path, tuple[str, int]],
+    include_private: bool,
+    slice_backend: SliceBackend,
+    langserver_cmd: list[str] | None,
+    python_roots: list[Path],
+) -> None:
+    """Add semantic reference files for one Python target."""
+    if slice_backend is not SliceBackend.PYRIGHT:
+        raise ValueError("--uses requires --slice-backend pyright (no fallback)")
+    resolved = index.resolve_module(target_module)
+    if resolved is None:
+        raise ValueError(f"Unknown target module: {target_module}")
+    positions = python_public_symbol_positions(resolved.path, include_private=include_private)
+    references: set[Path] = set()
+    if positions:
+        from anatomize.pack.pyright_lsp import pyright_referenced_files
+
+        references = pyright_referenced_files(
+            root=root,
+            target_file=resolved.path,
+            positions=positions,
+            langserver_cmd=langserver_cmd or ["pyright-langserver", "--stdio"],
+            python_roots=python_roots,
+            workspace_files=[module.path for module in index.modules()],
+        )
+    selected.update(references)
+    selected.add(resolved.path)
+    roles[resolved.path] = ("focus", 0)
+    for referenced in references:
+        roles.setdefault(referenced, ("reference", 1))
+
+
+def _materialize_pack_files(
+    selection: PackSelection,
+    *,
+    root: Path,
+    mode: PackMode,
+    workers: int,
+    token_encoding: str,
+    compress: bool,
+    content_encoding: ContentEncoding,
+    line_numbers: bool,
+    include_files: bool,
+    representation_content: list[str] | None,
+    representation_summary: list[str] | None,
+    representation_meta: list[str] | None,
+    summary_config: SummaryConfig | None,
+) -> MaterializedFiles:
+    """Render selected files into format-independent pack records."""
+    if mode is PackMode.HYBRID and not include_files and representation_content:
+        raise ValueError("--no-files cannot be combined with --content rules in --mode hybrid")
+    if mode is not PackMode.HYBRID and not include_files:
+        files = [
+            PackFile(
+                path=item.relative_posix,
+                language=_language_for_path(item.absolute_path),
+                is_binary=item.is_binary,
+                content=None,
+            )
+            for item in selection.files
+        ]
+        return MaterializedFiles(files, [], {}, TokenCounts(per_file_content_tokens={}, content_total_tokens=0))
+    if mode is PackMode.HYBRID:
+        return _materialize_hybrid(
+            selection,
+            root=root,
+            workers=workers,
+            token_encoding=token_encoding,
+            content_encoding=content_encoding,
+            line_numbers=line_numbers,
+            include_files=include_files,
+            representation_content=representation_content,
+            representation_summary=representation_summary,
+            representation_meta=representation_meta,
+            summary_config=summary_config,
+        )
+    return _materialize_bundle(
+        selection,
+        root=root,
+        workers=workers,
+        token_encoding=token_encoding,
+        compress=compress,
+        line_numbers=line_numbers,
+    )
+
+
+def _materialize_hybrid(
+    selection: PackSelection,
+    *,
+    root: Path,
+    workers: int,
+    token_encoding: str,
+    content_encoding: ContentEncoding,
+    line_numbers: bool,
+    include_files: bool,
+    representation_content: list[str] | None,
+    representation_summary: list[str] | None,
+    representation_meta: list[str] | None,
+    summary_config: SummaryConfig | None,
+) -> MaterializedFiles:
+    """Render hybrid records with deterministic parallel collection."""
+    rules: list[RepresentationRule] = compile_representation_rules(
+        [
+            f"/{item.relative_posix}"
+            for item in selection.files
+            if selection.roles.get(item.absolute_path, ("", -1))[0] == "focus"
+        ],
+        FileRepresentation.CONTENT,
+    )
+    rules.extend(compile_representation_rules(representation_meta or [], FileRepresentation.META))
+    rules.extend(compile_representation_rules(representation_summary or [], FileRepresentation.SUMMARY))
+    rules.extend(compile_representation_rules(representation_content or [], FileRepresentation.CONTENT))
+    policy = RepresentationPolicy(rules=rules)
+    summary_cfg = summary_config or SummaryConfig()
+
+    def process(item: DiscoveredPath) -> HybridProcessResult:
+        return _process_one_file_hybrid(
+            item,
+            root=root,
+            python_roots=selection.python_roots,
+            token_encoding=token_encoding,
+            content_encoding=content_encoding,
+            line_numbers=line_numbers,
+            policy=policy,
+            summary_cfg=summary_cfg,
+            include_files=include_files,
+        )
+
+    results = _collect_parallel(selection.files, process, workers=workers)
+    ordered = [result for _path, result in sorted((result[0].path, result) for result in results)]
+    files = [result[1] for result in ordered]
+    jsonl_files = [result[0] for result in ordered]
+    per_file = {result[0].path: result[2] for result in ordered}
+    return MaterializedFiles(
+        files=files,
+        jsonl_files=jsonl_files,
+        payload_by_path={},
+        token_counts=TokenCounts(
+            per_file_content_tokens=per_file,
+            content_total_tokens=sum(per_file.values()),
+        ),
+    )
+
+
+def _materialize_bundle(
+    selection: PackSelection,
+    *,
+    root: Path,
+    workers: int,
+    token_encoding: str,
+    compress: bool,
+    line_numbers: bool,
+) -> MaterializedFiles:
+    """Render conventional bundle records with deterministic collection."""
+
+    def process(item: DiscoveredPath) -> tuple[str, PackFile, str | None]:
+        return _process_one_file(
+            item,
+            root=root,
+            python_roots=selection.python_roots,
+            compress=compress,
+            line_numbers=line_numbers,
+        )
+
+    results = _collect_parallel(selection.files, process, workers=workers)
+    ordered = sorted(results, key=lambda result: result[0])
+    payload_by_path = {rel: content for rel, _file, content in ordered if content is not None}
+    return MaterializedFiles(
+        files=[file for _rel, file, _content in ordered],
+        jsonl_files=[],
+        payload_by_path=payload_by_path,
+        token_counts=count_content_tokens_by_path(payload_by_path, encoding_name=token_encoding),
+    )
+
+
+def _collect_parallel(
+    items: list[DiscoveredPath],
+    process: Callable[[DiscoveredPath], ProcessResult],
+    *,
+    workers: int,
+) -> list[ProcessResult]:
+    """Execute one deterministic file stage and aggregate expected failures."""
+    workers_resolved = _resolve_workers(workers, len(items))
+    if workers_resolved == 1:
+        return [process(item) for item in items]
+    errors: list[str] = []
+    results: list[ProcessResult] = []
+    with ThreadPoolExecutor(max_workers=workers_resolved) as executor:
+        futures = [executor.submit(process, item) for item in items]
+        for future in futures:
+            try:
+                results.append(future.result())
+            except ValueError as error:
+                errors.append(str(error))
+    if errors:
+        raise ValueError("Failed to pack files:\n" + "\n".join(f"- {message}" for message in sorted(errors)))
+    return results
+
+
+def _build_pack_payload(
+    *,
+    root: Path,
+    selection: PackSelection,
+    materialized: MaterializedFiles,
+    token_encoding: str,
+    compress: bool,
+    content_encoding: ContentEncoding,
+    prefix_style: PrefixStyle,
+    line_numbers: bool,
+    include_structure: bool,
+    include_files: bool,
+) -> PackPayload:
+    """Build the repository-level payload around rendered files."""
+    files_by_path = {file.path: file for file in materialized.files}
+    files = [files_by_path[path] for path in sorted(files_by_path)]
+    selected_paths = [item.relative_posix for item in selection.files]
+    directories = {
+        "/".join(parts[:index])
+        for relative in selected_paths
+        for parts in [relative.split("/")]
+        for index in range(1, len(parts))
+    }
+    structure_nodes = [(path, True) for path in sorted(directories)]
+    structure_nodes.extend((path, False) for path in sorted(selected_paths))
+    return PackPayload(
+        root_name=root.name,
+        structure_paths=render_structure_tree(structure_nodes),
+        overview=build_pack_overview(
+            root=root,
+            selected_rel_paths=selected_paths,
+            size_by_rel=selection.size_by_path,
+            is_binary_by_rel=selection.binary_by_path,
+        ),
+        files=files,
+        encoding_name=token_encoding,
+        compressed=compress,
+        content_encoding=content_encoding,
+        prefix_style=prefix_style,
+        line_numbers=line_numbers,
+        include_structure=include_structure,
+        include_files=include_files,
+    )
 
 
 def pack(
@@ -416,319 +889,69 @@ def pack(
         For invalid parameter combinations or file errors.
     """
     root = root.resolve()
+    out_path = (output if output is not None else default_output_path(fmt)).resolve()
 
-    if mode is PackMode.HYBRID:
-        if compress:
-            raise ValueError("--compress is not supported in --mode hybrid")
-        if fmt not in (PackFormat.JSONL, PackFormat.MARKDOWN, PackFormat.PLAIN):
-            raise ValueError("--mode hybrid supports only markdown, plain, or jsonl output")
-        if fit_to_max_output:
-            if fmt is not PackFormat.JSONL:
-                raise ValueError("--fit-to-max-output is only supported with --mode hybrid --format jsonl")
-            if max_output is None:
-                raise ValueError("--fit-to-max-output requires --max-output")
+    validate_pack_request(
+        root=root,
+        out_path=out_path,
+        fmt=fmt,
+        mode=mode,
+        compress=compress,
+        fit_to_max_output=fit_to_max_output,
+        max_output=max_output,
+        entries=entries,
+        target=target,
+        target_module=target_module,
+        reverse_deps=reverse_deps,
+        deps=deps,
+        uses=uses,
+        slice_backend=slice_backend,
+    )
 
-    excluder = build_excluder(
-        root,
+    selection = _select_pack_files(
+        root=root,
+        out_path=out_path,
+        include=include,
         ignore=ignore,
         ignore_files=ignore_files,
         respect_standard_ignores=respect_standard_ignores,
-    )
-
-    trace: list[DiscoveryTraceItem] | None = [] if selection_report_output is not None else None
-    discovered = discover_paths(
-        root,
-        excluder=excluder,
-        include_patterns=include if include else None,
         symlinks=symlinks,
         max_file_bytes=max_file_bytes,
-        trace=trace,
+        selection_report_output=selection_report_output,
+        mode=mode,
+        entries=entries,
+        deps=deps,
+        target=target,
+        target_module=target_module,
+        reverse_deps=reverse_deps,
+        uses=uses,
+        uses_include_private=uses_include_private,
+        slice_backend=slice_backend,
+        pyright_langserver_cmd=pyright_langserver_cmd,
+        python_roots=python_roots,
     )
 
-    file_paths = [d for d in discovered if not d.is_dir]
-    discovered_files_set = {d.absolute_path for d in file_paths}
-
-    selected_files: set[Path] | None = None
-    resolved_python_roots = _resolve_python_roots(root, python_roots or _default_python_roots(root))
-    if entries and (target is not None or target_module is not None or reverse_deps):
-        raise ValueError("Use either --entry or --target/--module selection, not both")
-
-    if (target is not None or target_module is not None) and not reverse_deps and not deps and not uses:
-        # Selecting a target without a selection mode is ambiguous.
-        raise ValueError("When using --target/--module, specify --reverse-deps, --deps, and/or --uses")
-
-    if entries:
-        resolved_entries = [(root / p).resolve() if not p.is_absolute() else p.resolve() for p in entries]
-        for e in resolved_entries:
-            if not e.exists() or not e.is_file():
-                raise ValueError(f"--entry must be an existing file: {e}")
-            try:
-                e.relative_to(root)
-            except ValueError as exc:
-                raise ValueError(f"--entry must be within ROOT ({root}): {e}") from exc
-            if deps and e.suffix != ".py":
-                raise ValueError(f"--deps requires Python entry files (*.py): {e}")
-        if not deps:
-            selected_files = set(resolved_entries)
-        else:
-            index = PythonModuleIndex(resolved_python_roots, symlinks=symlinks)
-            closure = dependency_closure(resolved_entries, index=index)
-            selected_files = set(closure)
-    elif target is not None or target_module is not None:
-        index = PythonModuleIndex(resolved_python_roots, symlinks=symlinks)
-        if target is not None and target_module is not None:
-            raise ValueError("Specify at most one of --target or --module")
-        if target is not None:
-            abs_target = (root / target).resolve() if not target.is_absolute() else target.resolve()
-            if not abs_target.exists() or not abs_target.is_file():
-                raise ValueError(f"--target must be an existing file: {abs_target}")
-            if abs_target.suffix != ".py":
-                raise ValueError(f"--target must be a Python file (*.py): {abs_target}")
-            target_mod = index.module_for_path(abs_target).module
-        else:
-            target_mod = target_module or ""
-
-        selected: set[Path] = set()
-        if reverse_deps:
-            selected.update(reverse_dependency_closure(target_mod, index=index))
-        if uses:
-            if slice_backend is not SliceBackend.PYRIGHT:
-                raise ValueError("--uses requires --slice-backend pyright (no fallback)")
-            if pyright_langserver_cmd is None:
-                pyright_langserver_cmd = ["pyright-langserver", "--stdio"]
-            resolved = index.resolve_module(target_mod)
-            if resolved is None:
-                raise ValueError(f"Unknown target module: {target_mod}")
-            positions = python_public_symbol_positions(resolved.path, include_private=uses_include_private)
-            if positions:
-                from anatomize.pack.pyright_lsp import pyright_referenced_files
-
-                refs = pyright_referenced_files(
-                    root=root,
-                    target_file=resolved.path,
-                    positions=positions,
-                    langserver_cmd=pyright_langserver_cmd,
-                    python_roots=resolved_python_roots,
-                    workspace_files=[m.path for m in index.modules()],
-                )
-                selected.update(refs)
-            selected.add(resolved.path)
-        if deps:
-            # Forward closure from the currently selected set (or from the target itself if reverse not requested).
-            if selected:
-                start = sorted(selected)
-            else:
-                resolved = index.resolve_module(target_mod)
-                if resolved is None:
-                    raise ValueError(f"Unknown target module: {target_mod}")
-                start = [resolved.path]
-            selected.update(dependency_closure(start, index=index))
-        selected_files = selected
-
-    if selected_files is not None:
-        _ensure_required_files_included(
-            root,
-            required=selected_files,
-            discovered_files=discovered_files_set,
-            include_patterns=include,
-            excluder=excluder,
-            symlinks=symlinks,
-        )
-
-    selected_file_paths = [d for d in file_paths if selected_files is None or d.absolute_path in selected_files]
-    if selection_report_output is not None:
-        _write_selection_report(
-            selection_report_output,
-            root_name=root.name,
-            include_patterns=include,
-            excluder=excluder,
-            respect_standard_ignores=respect_standard_ignores,
-            ignore_files=ignore_files,
-            symlinks=symlinks,
-            max_file_bytes=max_file_bytes,
-            mode=mode,
-            entries=entries,
-            deps=deps,
-            target=target,
-            target_module=target_module,
-            reverse_deps=reverse_deps,
-            uses=uses,
-            slice_backend=slice_backend,
-            discovered_files=file_paths,
-            selected_files=selected_file_paths,
-            trace=(trace or []),
-        )
-    size_by_rel: dict[str, int] = {d.relative_posix: d.size_bytes for d in selected_file_paths}
-    is_binary_by_rel: dict[str, bool] = {d.relative_posix: d.is_binary for d in selected_file_paths}
-
-    payload_by_path: dict[str, str] = {}
-    files: list[PackFile] = []
-    jsonl_files: list[JsonlFile] = []
-    hybrid_per_file_tokens: dict[str, int] = {}
-
-    if mode is PackMode.HYBRID and not include_files and representation_content:
-        raise ValueError("--no-files cannot be combined with --content rules in --mode hybrid")
-
-    if mode is not PackMode.HYBRID and not include_files:
-        for f in selected_file_paths:
-            files.append(
-                PackFile(
-                    path=f.relative_posix,
-                    language=_language_for_path(f.absolute_path),
-                    is_binary=f.is_binary,
-                    content=None,
-                )
-            )
-    else:
-        workers_resolved = _resolve_workers(workers, len(selected_file_paths))
-        if mode is PackMode.HYBRID:
-            summary_cfg = summary_config or SummaryConfig()
-            rep_rules: list[RepresentationRule] = []
-            rep_rules.extend(compile_representation_rules(representation_meta or [], FileRepresentation.META))
-            rep_rules.extend(compile_representation_rules(representation_summary or [], FileRepresentation.SUMMARY))
-            rep_rules.extend(compile_representation_rules(representation_content or [], FileRepresentation.CONTENT))
-            policy = RepresentationPolicy(rules=rep_rules)
-
-            if workers_resolved == 1:
-                for f in selected_file_paths:
-                    jf, pf, file_tokens, _summary, _rep = _process_one_file_hybrid(
-                        f,
-                        root=root,
-                        python_roots=resolved_python_roots,
-                        token_encoding=token_encoding,
-                        content_encoding=content_encoding,
-                        line_numbers=line_numbers,
-                        policy=policy,
-                        summary_cfg=summary_cfg,
-                        include_files=include_files,
-                    )
-                    files.append(pf)
-                    jsonl_files.append(jf)
-                    hybrid_per_file_tokens[jf.path] = file_tokens
-            else:
-                errors: list[str] = []
-                results_hybrid: dict[str, HybridProcessResult] = {}
-                with ThreadPoolExecutor(max_workers=workers_resolved) as executor_hybrid:
-                    futures_hybrid = [
-                        executor_hybrid.submit(
-                            _process_one_file_hybrid,
-                            f,
-                            root=root,
-                            python_roots=resolved_python_roots,
-                            token_encoding=token_encoding,
-                            content_encoding=content_encoding,
-                            line_numbers=line_numbers,
-                            policy=policy,
-                            summary_cfg=summary_cfg,
-                            include_files=include_files,
-                        )
-                        for f in selected_file_paths
-                    ]
-                    for fut_hybrid in futures_hybrid:
-                        try:
-                            jf, pf, file_tokens, summary, rep = fut_hybrid.result()
-                            results_hybrid[jf.path] = (jf, pf, file_tokens, summary, rep)
-                        except Exception as e:
-                            errors.append(str(e))
-
-                if errors:
-                    errors.sort()
-                    raise ValueError("Failed to pack files:\n" + "\n".join(f"- {m}" for m in errors))
-
-                for rel in sorted(results_hybrid.keys()):
-                    jf, pf, file_tokens, _summary, _rep = results_hybrid[rel]
-                    files.append(pf)
-                    jsonl_files.append(jf)
-                    hybrid_per_file_tokens[jf.path] = file_tokens
-        else:
-            if workers_resolved == 1:
-                for f in selected_file_paths:
-                    rel, pf, content = _process_one_file(
-                        f,
-                        root=root,
-                        python_roots=resolved_python_roots,
-                        compress=compress,
-                        line_numbers=line_numbers,
-                    )
-                    files.append(pf)
-                    if content is not None:
-                        payload_by_path[rel] = content
-            else:
-                errors_bundle: list[str] = []
-                results: dict[str, tuple[PackFile, str | None]] = {}
-                with ThreadPoolExecutor(max_workers=workers_resolved) as executor_bundle:
-                    futures_bundle = [
-                        executor_bundle.submit(
-                            _process_one_file,
-                            f,
-                            root=root,
-                            python_roots=resolved_python_roots,
-                            compress=compress,
-                            line_numbers=line_numbers,
-                        )
-                        for f in selected_file_paths
-                    ]
-                    for fut_bundle in futures_bundle:
-                        try:
-                            rel, pf, content = fut_bundle.result()
-                            results[rel] = (pf, content)
-                        except Exception as e:
-                            errors_bundle.append(str(e))
-
-                if errors_bundle:
-                    errors_bundle.sort()
-                    raise ValueError("Failed to pack files:\n" + "\n".join(f"- {m}" for m in errors_bundle))
-
-                for rel in sorted(results.keys()):
-                    pf, content = results[rel]
-                    files.append(pf)
-                    if content is not None:
-                        payload_by_path[rel] = content
-
-    token_counts = (
-        TokenCounts(
-            per_file_content_tokens=hybrid_per_file_tokens,
-            content_total_tokens=sum(hybrid_per_file_tokens.values()),
-        )
-        if mode is PackMode.HYBRID
-        else count_content_tokens_by_path(payload_by_path, encoding_name=token_encoding)
-    )
-    files_by_path = {f.path: f for f in files}
-    files = [
-        PackFile(
-            path=p,
-            language=files_by_path[p].language,
-            is_binary=files_by_path[p].is_binary,
-            content=files_by_path[p].content,
-        )
-        for p in sorted(files_by_path.keys())
-    ]
-
-    selected_rel_paths = [d.relative_posix for d in selected_file_paths]
-    structure_nodes: list[tuple[str, bool]] = []
-    dirs: set[str] = set()
-    for rel in selected_rel_paths:
-        parts = rel.split("/")
-        for i in range(1, len(parts)):
-            dirs.add("/".join(parts[:i]))
-    for dir_rel in sorted(dirs):
-        structure_nodes.append((dir_rel, True))
-    for file_rel in sorted(selected_rel_paths):
-        structure_nodes.append((file_rel, False))
-    structure_paths = render_structure_tree(structure_nodes)
-    overview = build_pack_overview(
+    materialized = _materialize_pack_files(
+        selection,
         root=root,
-        selected_rel_paths=selected_rel_paths,
-        size_by_rel=size_by_rel,
-        is_binary_by_rel=is_binary_by_rel,
+        mode=mode,
+        workers=workers,
+        token_encoding=token_encoding,
+        compress=compress,
+        content_encoding=content_encoding,
+        line_numbers=line_numbers,
+        include_files=include_files,
+        representation_content=representation_content,
+        representation_summary=representation_summary,
+        representation_meta=representation_meta,
+        summary_config=summary_config,
     )
-    payload = PackPayload(
-        root_name=root.name,
-        structure_paths=structure_paths,
-        overview=overview,
-        files=files,
-        encoding_name=token_encoding,
-        compressed=compress,
+    payload = _build_pack_payload(
+        root=root,
+        selection=selection,
+        materialized=materialized,
+        token_encoding=token_encoding,
+        compress=compress,
         content_encoding=content_encoding,
         prefix_style=prefix_style,
         line_numbers=line_numbers,
@@ -736,8 +959,6 @@ def pack(
         include_files=include_files,
     )
 
-    out_path = output if output is not None else default_output_path(fmt)
-    out_path = out_path.resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     inferred_from_output = infer_pack_format_from_output_path(out_path)
     if inferred_from_output is not None and inferred_from_output is not fmt:
@@ -752,8 +973,8 @@ def pack(
             split_output=split_output,
             max_output=max_output,
             mode=mode,
-            files=jsonl_files if mode is PackMode.HYBRID else None,
-            size_by_rel=size_by_rel,
+            files=materialized.jsonl_files if mode is PackMode.HYBRID else None,
+            size_by_rel=selection.size_by_path,
             representation_rules=(
                 {
                     "content": representation_content or [],
@@ -770,8 +991,8 @@ def pack(
         )
         return PackResult(
             artifacts=artifacts,
-            content_tokens=token_counts.content_total_tokens,
-            content_token_counts=token_counts,
+            content_tokens=materialized.token_counts.content_total_tokens,
+            content_token_counts=materialized.token_counts,
         )
 
     if split_output is None and fmt in (PackFormat.MARKDOWN, PackFormat.PLAIN):
@@ -785,8 +1006,8 @@ def pack(
         _commit_staged([staged])
         return PackResult(
             artifacts=[PackArtifact(path=out_path, bytes=staged.bytes, tokens=staged.tokens)],
-            content_tokens=token_counts.content_total_tokens,
-            content_token_counts=token_counts,
+            content_tokens=materialized.token_counts.content_total_tokens,
+            content_token_counts=materialized.token_counts,
         )
 
     writes: list[tuple[Path, str]] = []
@@ -823,8 +1044,8 @@ def pack(
 
     return PackResult(
         artifacts=artifacts,
-        content_tokens=token_counts.content_total_tokens,
-        content_token_counts=token_counts,
+        content_tokens=materialized.token_counts.content_total_tokens,
+        content_token_counts=materialized.token_counts,
     )
 
 
@@ -1116,6 +1337,7 @@ def _atomic_write_many(writes: list[tuple[Path, str]]) -> None:
 def _write_selection_report(
     path: Path,
     *,
+    root: Path,
     root_name: str,
     include_patterns: list[str],
     excluder: Excluder,
@@ -1133,12 +1355,14 @@ def _write_selection_report(
     slice_backend: SliceBackend,
     discovered_files: list[DiscoveredPath],
     selected_files: list[DiscoveredPath],
+    selection_roles: dict[Path, tuple[str, int]],
     trace: list[DiscoveryTraceItem],
 ) -> None:
     path = path.resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
 
     selected_rel = {d.relative_posix for d in selected_files if not d.is_dir}
+    selected_by_rel = {d.relative_posix: d.absolute_path for d in selected_files}
     discovered_rel = [d.relative_posix for d in discovered_files if not d.is_dir]
 
     file_records: dict[str, dict[str, object]] = {}
@@ -1173,6 +1397,10 @@ def _write_selection_report(
             rec["reason"] = None
             rec["matched_pattern"] = None
             rec["matched_source"] = None
+            absolute = selected_by_rel[rel]
+            role = selection_roles.get(absolute)
+            rec["selection_role"] = role[0] if role is not None else "repository"
+            rec["graph_distance"] = role[1] if role is not None else None
             file_records[rel] = rec
         else:
             rec = file_records.get(rel) or {"path": rel}
@@ -1188,7 +1416,7 @@ def _write_selection_report(
             "negated": r.negated,
             "anchored": r.anchored,
             "directory_only": r.directory_only,
-            "source": r.source,
+            "source": _portable_source(r.source, root),
         }
         for r in excluder.rules()
     ]
@@ -1198,13 +1426,13 @@ def _write_selection_report(
         "mode": mode.value,
         "include_patterns": include_patterns,
         "respect_standard_ignores": respect_standard_ignores,
-        "ignore_files": [str(p) for p in ignore_files],
+        "ignore_files": [_portable_path(p, root) for p in ignore_files],
         "symlinks": symlinks.value,
         "max_file_bytes": max_file_bytes,
         "selection": {
-            "entries": [str(p) for p in entries],
+            "entries": [_portable_path(p, root) for p in entries],
             "deps": deps,
-            "target": str(target) if target is not None else None,
+            "target": _portable_path(target, root) if target is not None else None,
             "target_module": target_module,
             "reverse_deps": reverse_deps,
             "uses": uses,
@@ -1759,7 +1987,7 @@ def _ensure_required_files_included(
 
     reasons: list[str] = []
     for abs_path in missing:
-        rel = abs_path.relative_to(root).as_posix() if _is_within(abs_path, root) else abs_path.as_posix()
+        rel = abs_path.relative_to(root).as_posix() if is_within(abs_path, root) else abs_path.as_posix()
         reason = "excluded"
         try:
             is_symlink = abs_path.is_symlink()
@@ -1790,9 +2018,17 @@ def _ensure_required_files_included(
     )
 
 
-def _is_within(path: Path, root: Path) -> bool:
-    try:
-        path.relative_to(root)
-        return True
-    except ValueError:
-        return False
+def _portable_path(path: Path, root: Path) -> str:
+    if not path.is_absolute():
+        return path.as_posix()
+    resolved = path.resolve()
+    if is_within(resolved, root):
+        return resolved.relative_to(root).as_posix()
+    return f"external:{resolved.name}"
+
+
+def _portable_source(source: str, root: Path) -> str:
+    prefix = "ignore_file:"
+    if not source.startswith(prefix):
+        return source
+    return prefix + _portable_path(Path(source[len(prefix) :]), root)

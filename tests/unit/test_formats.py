@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 import pytest
@@ -29,7 +28,7 @@ def test_write_json_includes_schemas_and_relative_paths(tmp_path: Path) -> None:
     sources = hierarchy["metadata"]["sources"]
     assert isinstance(sources, list)
     assert len(sources) == 1
-    assert sources[0] == Path(os.path.relpath(root.resolve(), out.resolve())).as_posix()
+    assert sources[0] == "external:src"
 
     pkg = json.loads((out / "modules" / "pkg.json").read_text(encoding="utf-8"))
     assert pkg["$schema"] == "../schemas/module.schema.json"

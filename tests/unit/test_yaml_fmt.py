@@ -158,7 +158,7 @@ class TestYamlFormatting:
         """Test that unicode characters are preserved."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="0.2.0",
+                generator_version="1.0.0rc1",
                 sources=["/test"],
                 resolution=ResolutionLevel.MODULES,
             ),
@@ -185,7 +185,7 @@ class TestEdgeCases:
         """Test formatting skeleton with no packages or modules."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="0.2.0",
+                generator_version="1.0.0rc1",
                 sources=["/test"],
                 resolution=ResolutionLevel.HIERARCHY,
             ),
@@ -200,7 +200,7 @@ class TestEdgeCases:
         """Test formatting skeleton with multiple packages."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="0.2.0",
+                generator_version="1.0.0rc1",
                 sources=["/test"],
                 resolution=ResolutionLevel.HIERARCHY,
             ),
@@ -219,7 +219,7 @@ class TestEdgeCases:
         """Test that special characters in paths are handled."""
         skeleton = Skeleton(
             metadata=SkeletonMetadata(
-                generator_version="0.2.0",
+                generator_version="1.0.0rc1",
                 sources=["/test/path with spaces"],
                 resolution=ResolutionLevel.MODULES,
             ),

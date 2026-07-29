@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.0.0rc1 - 2026-07-29
+
+### Added
+
+- Portable repository indexes with exact Python source identity, definitions,
+  public exports, and resolved static local imports.
+- `find`, `impact`, and explicit-base `changed` commands for task-bounded agent
+  context.
+- `check` for configured skeleton, pack, and stored-index drift.
+- Role and graph-distance provenance in pack selection reports.
+- A valid Codex skill and agent metadata.
+
+### Changed
+
+- Pack requests are validated before discovery.
+- File-size limits apply only to selected files.
+- Pack outputs, split artifacts, reports, and temporary files are excluded from
+  their own source boundary.
+- Broken and forbidden symlinks are skipped deterministically.
+- Persisted paths are portable and expected CLI errors are concise.
+- Representation rules reuse the canonical glob matcher.
+
 ## 0.2.1 - 2026-02-01
 
 ### Added

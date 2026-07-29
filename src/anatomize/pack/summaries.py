@@ -111,7 +111,7 @@ def yaml_summary(text: str, *, cfg: SummaryConfig) -> dict[str, Any]:
     """
     try:
         obj = yaml.safe_load(text)
-    except Exception as e:
+    except yaml.YAMLError as e:
         raise ValueError("Failed to parse YAML for summary") from e
     paths = _outline_paths(obj, max_depth=cfg.max_depth, max_items=cfg.max_items, max_keys=cfg.max_keys)
     return {"type": "yaml", "paths": paths}
@@ -139,7 +139,7 @@ def toml_summary(text: str, *, cfg: SummaryConfig) -> dict[str, Any]:
     """
     try:
         obj = tomli.loads(text)
-    except Exception as e:
+    except tomli.TOMLDecodeError as e:
         raise ValueError("Failed to parse TOML for summary") from e
     paths = _outline_paths(obj, max_depth=cfg.max_depth, max_items=cfg.max_items, max_keys=cfg.max_keys)
     return {"type": "toml", "paths": paths}

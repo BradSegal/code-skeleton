@@ -12,6 +12,23 @@ from anatomize.cli import app
 pytestmark = pytest.mark.e2e
 
 
+def test_expected_pack_error_is_concise_without_verbose(tmp_path: Path) -> None:
+    result = CliRunner().invoke(
+        app,
+        [
+            "pack",
+            str(tmp_path),
+            "--target",
+            "missing.py",
+            "--reverse-deps",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Error:" in result.output
+    assert "Traceback" not in result.output
+
+
 def _tokens_from_cli(output: str) -> int:
     m = re.search(r"Artifact tokens:\s*([0-9,]+)", output)
     assert m, output

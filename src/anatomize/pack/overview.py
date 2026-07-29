@@ -10,6 +10,8 @@ compact summary that helps agents orient themselves quickly.
 
 from __future__ import annotations
 
+import hashlib
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +52,10 @@ def build_pack_overview(
             binary_files += 1
 
     return {
+        "source": {
+            "commit": _git_commit(root),
+            "selected_sha256": _selected_digest(root, files),
+        },
         "selected": {
             "files": len(files),
             "python_files": len(python_files),
@@ -57,3 +63,25 @@ def build_pack_overview(
             "total_bytes": total_bytes,
         },
     }
+
+
+def _selected_digest(root: Path, files: list[str]) -> str:
+    digest = hashlib.sha256()
+    for relative in files:
+        path = root / relative
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def _git_commit(root: Path) -> str | None:
+    completed = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None

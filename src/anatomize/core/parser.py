@@ -19,6 +19,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def docstring_first_line(text: str) -> str:
+    """Return the first meaningful line from a quoted docstring."""
+    if text.startswith('"""') or text.startswith("'''"):
+        text = text[3:-3]
+    elif text.startswith('"') or text.startswith("'"):
+        text = text[1:-1]
+    return next((line.strip() for line in text.strip().splitlines() if line.strip()), "")
+
+
 class PythonParser:
     """Tree-sitter parser for Python source code.
 
@@ -204,19 +213,7 @@ class PythonParser:
         str
             First meaningful line of the docstring.
         """
-        # Remove quotes
-        if text.startswith('"""') or text.startswith("'''"):
-            text = text[3:-3]
-        elif text.startswith('"') or text.startswith("'"):
-            text = text[1:-1]
-
-        # Get first non-empty line
-        lines = text.strip().split("\n")
-        for line in lines:
-            line = line.strip()
-            if line:
-                return line
-        return ""
+        return docstring_first_line(text)
 
     def get_name(self, node: Node) -> str:
         """Get the name from a definition node.

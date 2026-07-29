@@ -20,11 +20,12 @@ jobs:
 
       - name: Build
         run: |
-          python -m pip install -U pip build
+          python -m pip install -U pip build twine check-wheel-contents
           python -m build
+          python -m twine check --strict dist/*
+          check-wheel-contents dist/*.whl
 
       - name: Publish to TestPyPI (trusted publishing)
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-

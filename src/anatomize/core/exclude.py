@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from functools import cache
 from pathlib import PurePosixPath
-from typing import TypeAlias
+from typing import Protocol, TypeAlias
 
 
 @dataclass(frozen=True)
@@ -66,6 +66,26 @@ class ExcludeRule:
     directory_only: bool
     has_slash: bool
     source: str
+
+
+class PathMatchRule(Protocol):
+    """Structural contract required by the shared path matcher."""
+
+    @property
+    def pattern(self) -> str:
+        """Return the normalized glob pattern."""
+
+    @property
+    def anchored(self) -> bool:
+        """Return whether matching starts at the repository root."""
+
+    @property
+    def directory_only(self) -> bool:
+        """Return whether the rule only targets directories."""
+
+    @property
+    def has_slash(self) -> bool:
+        """Return whether the pattern spans path segments."""
 
 
 IgnorePattern: TypeAlias = str | tuple[str, str]
@@ -160,37 +180,28 @@ class Excluder:
         dirnames[:] = keep
 
     def _matches(self, path: PurePosixPath, rule: ExcludeRule, *, is_dir: bool) -> bool:
-        # Directory-only rules match the directory and anything under it.
-        if rule.directory_only:
-            if is_dir and self._match_single(path, rule):
-                return True
-            for parent in path.parents:
-                if self._match_single(parent, rule):
-                    return True
-            return False
+        return path_matches_rule(path, rule, is_dir=is_dir)
 
-        return self._match_single(path, rule)
 
-    def _match_single(self, path: PurePosixPath, rule: ExcludeRule) -> bool:
-        pattern = rule.pattern
+def path_matches_rule(path: PurePosixPath, rule: PathMatchRule, *, is_dir: bool) -> bool:
+    """Match one parsed rule against a repository-relative path."""
+    if rule.directory_only:
+        if is_dir and _match_single(path, rule):
+            return True
+        return any(_match_single(parent, rule) for parent in path.parents)
+    return _match_single(path, rule)
 
-        path_parts = tuple(p for p in path.parts if p != ".")
-        pat_parts = tuple(part for part in pattern.split("/") if part)
 
-        if not rule.has_slash and not rule.anchored:
-            # Basename-style matching (gitignore-like): matches the last segment.
-            if not path_parts:
-                return False
-            return fnmatchcase(path_parts[-1], pattern)
+def _match_single(path: PurePosixPath, rule: PathMatchRule) -> bool:
+    pattern = rule.pattern
+    path_parts = tuple(part for part in path.parts if part != ".")
+    pat_parts = tuple(part for part in pattern.split("/") if part)
 
-        if rule.anchored:
-            return _match_parts(pat_parts, path_parts)
-
-        # Pattern with slash and not anchored: match at any segment boundary.
-        for start in range(len(path_parts) + 1):
-            if _match_parts(pat_parts, path_parts[start:]):
-                return True
-        return False
+    if not rule.has_slash and not rule.anchored:
+        return bool(path_parts) and fnmatchcase(path_parts[-1], pattern)
+    if rule.anchored:
+        return _match_parts(pat_parts, path_parts)
+    return any(_match_parts(pat_parts, path_parts[start:]) for start in range(len(path_parts) + 1))
 
 
 @cache

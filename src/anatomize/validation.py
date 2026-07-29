@@ -84,7 +84,7 @@ def _detect_resolution(skeleton_dir: Path) -> ResolutionLevel:
     data = _read_hierarchy_metadata(skeleton_dir)
     try:
         return ResolutionLevel(data["resolution"])
-    except Exception as e:
+    except (KeyError, TypeError, ValueError) as e:
         raise ValueError(f"Invalid or missing resolution in {skeleton_dir}") from e
 
 
@@ -141,7 +141,7 @@ def _atomic_replace_dir(*, dst: Path, src: Path) -> None:
             dst.rename(backup)
             moved_backup = True
         src.rename(dst)
-    except Exception:
+    except OSError:
         # Attempt rollback if we moved the original aside but didn't restore it.
         if moved_backup and not dst.exists() and backup.exists():
             backup.rename(dst)

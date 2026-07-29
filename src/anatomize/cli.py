@@ -11,6 +11,7 @@ Usage
 
 from __future__ import annotations
 
+import json
 import logging
 from enum import Enum
 from pathlib import Path, PurePosixPath
@@ -34,6 +35,8 @@ app = typer.Typer(
     name="anatomize",
     help="Deterministic, token-efficient codebase packs and skeleton maps for AI review (Python).",
     add_completion=False,
+    rich_markup_mode=None,
+    pretty_exceptions_enable=False,
 )
 
 logger = logging.getLogger(__name__)
@@ -357,9 +360,7 @@ def generate(
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
     except Exception as e:
-        logger.exception("Failed to generate skeleton")
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
+        _report_unexpected("Failed to generate skeleton", e)
 
 
 @app.command()
@@ -476,9 +477,7 @@ def estimate(
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
     except Exception as e:
-        logger.exception("Failed to estimate tokens")
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
+        _report_unexpected("Failed to estimate tokens", e)
 
 
 @app.command()
@@ -612,8 +611,283 @@ def validate(
     except typer.Exit:
         raise
     except Exception as e:
-        logger.exception("Failed to validate skeleton")
-        typer.echo(f"Error: {e}", err=True)
+        _report_unexpected("Failed to validate skeleton", e)
+
+
+@app.command("index")
+def index_repository(
+    root: Annotated[
+        Path,
+        typer.Argument(
+            help="Repository root to index.",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            resolve_path=True,
+        ),
+    ] = Path("."),
+    output: Annotated[
+        Path,
+        typer.Option(
+            "--output",
+            "-o",
+            help="Portable JSON index output.",
+        ),
+    ] = Path(".anatomy/index.json"),
+    python_root: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--python-root",
+            help="Python import root relative to ROOT. Repeatable.",
+        ),
+    ] = None,
+) -> None:
+    """Build a portable symbol and static-import index."""
+    try:
+        from anatomize.index import build_repository_index, write_json
+
+        resolved_output = output if output.is_absolute() else root / output
+        repository_index = build_repository_index(
+            root,
+            python_roots=python_root,
+        )
+        write_json(repository_index, resolved_output)
+        typer.echo(f"Wrote: {resolved_output.resolve()}")
+        typer.echo(
+            f"Indexed {len(repository_index.modules):,} modules and " f"{len(repository_index.symbols):,} symbols"
+        )
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("find")
+def find_repository_symbol(
+    query: Annotated[str, typer.Argument(help="Exact or partial symbol query.")],
+    root: Annotated[
+        Path,
+        typer.Option(
+            "--root",
+            help="Repository root.",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            resolve_path=True,
+        ),
+    ] = Path("."),
+    index_path: Annotated[
+        Path | None,
+        typer.Option("--index", help="Existing portable index; source drift is rejected."),
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Emit machine-readable JSON."),
+    ] = False,
+) -> None:
+    """Find Python definitions without reading a whole repository."""
+    try:
+        from anatomize.index import (
+            build_repository_index,
+            find_symbols,
+            load_repository_index,
+        )
+
+        resolved_index = _root_relative(root, index_path) if index_path is not None else None
+        repository_index = (
+            load_repository_index(root, resolved_index) if resolved_index is not None else build_repository_index(root)
+        )
+        matches = find_symbols(repository_index, query)
+        if as_json:
+            _echo_json([item.model_dump(mode="json") for item in matches])
+        else:
+            for item in matches:
+                typer.echo(f"{item.qualified_name}\t{item.kind.value}\t" f"{item.path}:{item.line}")
+        if not matches:
+            raise typer.Exit(1)
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("impact")
+def repository_impact(
+    query: Annotated[str, typer.Argument(help="Symbol, qualified name, or file path.")],
+    root: Annotated[
+        Path,
+        typer.Option(
+            "--root",
+            help="Repository root.",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            resolve_path=True,
+        ),
+    ] = Path("."),
+    index_path: Annotated[
+        Path | None,
+        typer.Option("--index", help="Existing portable index; source drift is rejected."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Write the JSON report to this path."),
+    ] = None,
+    max_depth: Annotated[
+        int,
+        typer.Option("--max-depth", min=0, help="Static import graph traversal depth."),
+    ] = 1,
+    max_related_per_role: Annotated[
+        int,
+        typer.Option(
+            "--max-related-per-role",
+            min=0,
+            help="Maximum heuristic text references per supporting role.",
+        ),
+    ] = 20,
+) -> None:
+    """Explain the files affected by a target and why they were selected."""
+    try:
+        from anatomize.index import (
+            build_impact_report,
+            build_repository_index,
+            load_repository_index,
+            write_json,
+        )
+
+        resolved_index = _root_relative(root, index_path) if index_path is not None else None
+        repository_index = (
+            load_repository_index(root, resolved_index) if resolved_index is not None else build_repository_index(root)
+        )
+        report = build_impact_report(
+            root,
+            repository_index,
+            query,
+            max_depth=max_depth,
+            max_related_per_role=max_related_per_role,
+        )
+        if output is None:
+            _echo_json(report.model_dump(mode="json"))
+        else:
+            resolved_output = _root_relative(root, output)
+            write_json(report, resolved_output)
+            typer.echo(f"Wrote: {resolved_output}")
+        if report.unresolved:
+            raise typer.Exit(1)
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("changed")
+def changed_repository_impact(
+    base: Annotated[
+        str,
+        typer.Option("--base", help="Explicit Git revision used as the comparison base."),
+    ],
+    root: Annotated[
+        Path,
+        typer.Option(
+            "--root",
+            help="Repository root.",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            resolve_path=True,
+        ),
+    ] = Path("."),
+    index_path: Annotated[
+        Path | None,
+        typer.Option("--index", help="Existing portable index; source drift is rejected."),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Write the JSON report to this path."),
+    ] = None,
+    max_depth: Annotated[
+        int,
+        typer.Option("--max-depth", min=0, help="Static import graph traversal depth."),
+    ] = 1,
+    max_related_per_role: Annotated[
+        int,
+        typer.Option(
+            "--max-related-per-role",
+            min=0,
+            help="Maximum heuristic text references per supporting role.",
+        ),
+    ] = 20,
+) -> None:
+    """Explain working-tree impact relative to an explicit Git base."""
+    try:
+        from anatomize.index import (
+            build_changed_report,
+            build_repository_index,
+            load_repository_index,
+            write_json,
+        )
+
+        resolved_index = _root_relative(root, index_path) if index_path is not None else None
+        repository_index = (
+            load_repository_index(root, resolved_index) if resolved_index is not None else build_repository_index(root)
+        )
+        report = build_changed_report(
+            root,
+            repository_index,
+            base=base,
+            max_depth=max_depth,
+            max_related_per_role=max_related_per_role,
+        )
+        if output is None:
+            _echo_json(report.model_dump(mode="json"))
+        else:
+            resolved_output = _root_relative(root, output)
+            write_json(report, resolved_output)
+            typer.echo(f"Wrote: {resolved_output}")
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(1)
+
+
+@app.command("check")
+def check_repository_artifacts(
+    root: Annotated[
+        Path,
+        typer.Argument(
+            help="Repository root.",
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            resolve_path=True,
+        ),
+    ] = Path("."),
+    config: Annotated[
+        Path | None,
+        typer.Option(
+            "--config",
+            help="Path to .anatomize.yaml.",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            resolve_path=True,
+        ),
+    ] = None,
+    as_json: Annotated[
+        bool,
+        typer.Option("--json", help="Emit the typed report as JSON."),
+    ] = False,
+) -> None:
+    """Validate configured skeleton, pack, and index artifacts."""
+    try:
+        from anatomize.project import check_project
+
+        report = check_project(root, config_path=config)
+        if as_json:
+            _echo_json(report.model_dump(mode="json"))
+        else:
+            for check in report.checks:
+                typer.echo(f"{check.status.value}\t{check.check_id}\t{check.message}")
+        if not report.successful:
+            raise typer.Exit(1)
+    except ValueError as exc:
+        typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)
 
 
@@ -994,9 +1268,7 @@ def pack(
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(1)
     except Exception as e:
-        logger.exception("Failed to pack repository")
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1)
+        _report_unexpected("Failed to pack repository", e)
 
 
 def _split_cmd(value: str) -> list[str]:
@@ -1006,6 +1278,22 @@ def _split_cmd(value: str) -> list[str]:
     if not parts:
         raise ValueError("Empty command")
     return parts
+
+
+def _root_relative(root: Path, path: Path) -> Path:
+    """Resolve one command artifact path relative to the repository root."""
+    return path.resolve() if path.is_absolute() else (root / path).resolve()
+
+
+def _echo_json(value: object) -> None:
+    typer.echo(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
+
+
+def _report_unexpected(context: str, error: Exception) -> None:
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.exception(context)
+    typer.echo(f"Error: {error}", err=True)
+    raise typer.Exit(1)
 
 
 if __name__ == "__main__":

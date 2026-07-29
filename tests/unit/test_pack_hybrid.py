@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -15,10 +16,10 @@ from anatomize.pack.summaries import SummaryConfig
 pytestmark = pytest.mark.unit
 
 
-def _read_jsonl(path: Path) -> list[dict]:
-    out: list[dict] = []
+def _read_jsonl(path: Path) -> list[dict[str, object]]:
+    out: list[dict[str, object]] = []
     for line in path.read_text(encoding="utf-8").splitlines():
-        out.append(json.loads(line))
+        out.append(cast(dict[str, object], json.loads(line)))
     return out
 
 
@@ -70,6 +71,36 @@ def test_pack_hybrid_defaults_to_python_summaries(tmp_path: Path) -> None:
     assert a["content"] is None
     assert b["representation"] == "meta"
     assert b["summary"] is None
+
+
+def test_pack_hybrid_keeps_focal_entry_as_content(tmp_path: Path) -> None:
+    target = tmp_path / "target.py"
+    target.write_text("VALUE = 1\n", encoding="utf-8")
+    (tmp_path / "support.py").write_text("VALUE = 2\n", encoding="utf-8")
+    out = tmp_path / "out.jsonl"
+
+    pack(
+        root=tmp_path,
+        output=out,
+        fmt=PackFormat.JSONL,
+        mode=PackMode.HYBRID,
+        include=[],
+        ignore=[],
+        ignore_files=[],
+        respect_standard_ignores=False,
+        symlinks=SymlinkPolicy.FORBID,
+        max_file_bytes=1_000_000,
+        token_encoding="cl100k_base",
+        compress=False,
+        entries=[target],
+        deps=False,
+        python_roots=[],
+    )
+
+    rows = _read_jsonl(out)
+    focal = next(row for row in rows if row.get("path") == "target.py")
+    assert focal["representation"] == "content"
+    assert focal["content"] == "VALUE = 1\n"
 
 
 def test_pack_hybrid_content_rule_includes_full_content(tmp_path: Path) -> None:

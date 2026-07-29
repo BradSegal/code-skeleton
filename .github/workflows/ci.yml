@@ -31,7 +31,7 @@ jobs:
 
       - name: Typecheck
         run: |
-          python -m mypy --strict src
+          python -m mypy --strict src tests
 
       - name: Test
         run: |
@@ -39,8 +39,10 @@ jobs:
 
       - name: Build
         run: |
-          python -m pip install build
+          python -m pip install build twine check-wheel-contents
           python -m build
+          python -m twine check --strict dist/*
+          check-wheel-contents dist/*.whl
 
       - name: Install wheel smoke test
         run: |
@@ -48,8 +50,10 @@ jobs:
           . .venv-smoke/bin/activate
           python -m pip install -U pip
           python -m pip install dist/*.whl
-          anatomize generate tests/fixtures/project_src/src --output .anatomy-smoke -f json
-          anatomize validate .anatomy-smoke --source tests/fixtures/project_src/src
+          cd "$(mktemp -d)"
+          anatomize --version
+          anatomize index "$GITHUB_WORKSPACE" --output repository-index.json
+          anatomize find RepositoryIndex --root "$GITHUB_WORKSPACE"
 
   pyright-e2e:
     runs-on: ubuntu-latest

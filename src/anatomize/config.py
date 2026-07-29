@@ -83,6 +83,10 @@ DEFAULT_EXCLUDE: list[str] = [
     ".mypy_cache",
     ".pytest_cache",
     ".ruff_cache",
+    ".runtime",
+    "dist",
+    "build",
+    "*.egg-info",
 ]
 
 
