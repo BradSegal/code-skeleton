@@ -201,10 +201,17 @@ class SkeletonGenerator:
         )
 
     def _estimate_tokens(self, skeleton: Skeleton) -> int:
-        """Estimate token count from a canonical deterministic representation."""
+        """Estimate structural tokens without checkout-specific source paths."""
         encoding = tiktoken.get_encoding("cl100k_base")
+        portable = skeleton.model_copy(
+            update={
+                "metadata": skeleton.metadata.model_copy(
+                    update={"sources": [f"source:{index}" for index, _ in enumerate(skeleton.metadata.sources)]}
+                )
+            }
+        )
         canonical = json.dumps(
-            skeleton.to_dict(),
+            portable.to_dict(),
             sort_keys=True,
             ensure_ascii=False,
             separators=(",", ":"),

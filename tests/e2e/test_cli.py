@@ -95,6 +95,54 @@ def test_cli_generate_deterministic_across_cwd(monkeypatch: pytest.MonkeyPatch, 
     assert snap1 == snap2
 
 
+def test_configured_outputs_are_identical_after_checkout_relocation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Generated metadata and manifests must not retain an absolute checkout path."""
+    import shutil
+
+    template = tmp_path / "template"
+    package = template / "src" / "pkg"
+    package.mkdir(parents=True)
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "core.py").write_text("def answer() -> int:\n    return 42\n", encoding="utf-8")
+    (template / ".anatomize.yaml").write_text(
+        (
+            "output: .anatomy\n"
+            "sources:\n"
+            "  - path: src/pkg\n"
+            "    output: package\n"
+            "    level: modules\n"
+            "formats: [yaml, json]\n"
+            "workers: 1\n"
+        ),
+        encoding="utf-8",
+    )
+    left = tmp_path / "first" / "repository"
+    right = tmp_path / "different" / "absolute" / "repository"
+    shutil.copytree(template, left)
+    shutil.copytree(template, right)
+    runner = CliRunner()
+
+    snapshots: list[dict[str, bytes]] = []
+    for root in (left, right):
+        monkeypatch.chdir(root)
+        generated = runner.invoke(app, ["generate"])
+        assert generated.exit_code == 0, generated.output
+        validated = runner.invoke(app, ["validate"])
+        assert validated.exit_code == 0, validated.output
+        output = root / ".anatomy"
+        snapshots.append(
+            {
+                path.relative_to(output).as_posix(): path.read_bytes()
+                for path in sorted(output.rglob("*"))
+                if path.is_file()
+            }
+        )
+
+    assert snapshots[0] == snapshots[1]
+
+
 def test_cli_invalid_format_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     src = tmp_path / "src"
     src.mkdir()
