@@ -45,6 +45,18 @@ anatomize impact RepositoryIndex --root . --index .anatomy/index.json \
 # Assess the current working tree against an explicit Git base
 anatomize changed --base origin/main --root . --output /tmp/changed-impact.json
 
+# Inspect installed review-surface capabilities and optional Pyright availability
+anatomize capabilities
+
+# Add exact semantic references, or fail explicitly when Pyright is unavailable
+anatomize impact RepositoryIndex --root . --semantic-references
+
+# Materialise only the role-labelled impact surface into a bounded JSON review bundle
+anatomize impact RepositoryIndex --root . \
+  --output /tmp/repository-index-impact.json \
+  --pack-output /tmp/repository-index-review.json \
+  --max-pack-bytes 1000000
+
 # Validate every configured skeleton, pack, and stored index
 anatomize check .
 ```
@@ -52,6 +64,13 @@ anatomize check .
 Repository indexes provide Python semantic edges. R and other files remain
 visible as supporting context in v1, but are not assigned invented symbol or
 dependency precision.
+
+Impact nodes retain a stable primary `role`, `distance`, and `reason` for
+existing consumers and also expose every independently observed relationship.
+`changed` resolves the explicit base commit, classifies added, modified,
+deleted, and renamed paths, localises added, modified, deleted, moved, and
+renamed definitions, and preserves baseline importers when a definition no
+longer exists in the working tree.
 
 ### Generate skeletons
 

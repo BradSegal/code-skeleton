@@ -107,3 +107,25 @@ def test_repository_artifact_paths_are_root_relative_and_errors_are_concise(tmp_
     assert result.exit_code == 1
     assert "Failed to read repository index" in result.output
     assert "Traceback" not in result.output
+
+
+def test_capabilities_and_impact_review_pack_are_machine_readable(tmp_path: Path) -> None:
+    (tmp_path / "pkg").mkdir()
+    (tmp_path / "pkg" / "core.py").write_text("def answer() -> int:\n    return 42\n", encoding="utf-8")
+    runner = CliRunner()
+
+    result = runner.invoke(app, ["capabilities"])
+    assert result.exit_code == 0, result.output
+    capabilities = json.loads(result.output)
+    assert capabilities["repository_intelligence"]["baseline_consumers"] is True
+    assert capabilities["repository_intelligence"]["semantic_references"]["failure_mode"] == "explicit"
+
+    pack = tmp_path.parent / "review-pack.json"
+    result = runner.invoke(
+        app,
+        ["impact", "answer", "--root", str(tmp_path), "--pack-output", str(pack)],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(pack.read_text(encoding="utf-8"))
+    assert payload["files"][0]["path"] == "pkg/core.py"
+    assert payload["files"][0]["relationships"][0]["source"] == "target"

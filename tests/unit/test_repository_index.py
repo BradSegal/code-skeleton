@@ -13,7 +13,7 @@ from anatomize.index import (
     find_symbols,
     write_json,
 )
-from anatomize.index.models import ImpactRole
+from anatomize.index.models import FileChangeStatus, ImpactRole, SymbolChangeStatus
 
 pytestmark = pytest.mark.unit
 
@@ -83,7 +83,14 @@ def test_index_find_and_impact_are_portable(indexed_repository: Path) -> None:
     assert by_path["src/sample/core.py"].role is ImpactRole.FOCUS
     assert by_path["src/sample/helpers.py"].role is ImpactRole.DEPENDENCY
     assert by_path["tests/test_core.py"].role is ImpactRole.TEST
+    assert {item.source for item in by_path["tests/test_core.py"].relationships} == {
+        "static_import",
+        "text_reference",
+    }
     assert by_path["docs/guide.md"].role is ImpactRole.DOCUMENTATION
+    symbol = matches[0]
+    assert (symbol.line, symbol.end_line, symbol.column) == (3, 4, 0)
+    assert len(symbol.digest) == 64
 
     output = indexed_repository.parent / "index.json"
     write_json(index, output)
@@ -112,6 +119,17 @@ def test_changed_report_uses_explicit_base(indexed_repository: Path) -> None:
     assert by_path["src/sample/core.py"].role is ImpactRole.IMPORTER
 
 
+def test_changed_report_omits_untracked_interpreter_caches(indexed_repository: Path) -> None:
+    cache = indexed_repository / "src" / "sample" / "__pycache__"
+    cache.mkdir()
+    (cache / "core.cpython-312.pyc").write_bytes(b"cache")
+    index = build_repository_index(indexed_repository)
+
+    report = build_changed_report(indexed_repository, index, base="HEAD")
+
+    assert report.changed_files == []
+
+
 def test_non_python_file_can_be_a_visible_focus(indexed_repository: Path) -> None:
     (indexed_repository / "R").mkdir()
     r_source = indexed_repository / "R" / "model.R"
@@ -123,3 +141,61 @@ def test_non_python_file_can_be_a_visible_focus(indexed_repository: Path) -> Non
     assert report.focus == ["R/model.R"]
     assert report.nodes[0].role is ImpactRole.FOCUS
     assert any("R and other languages" in item for item in report.limitations)
+
+
+def test_changed_report_preserves_deleted_symbol_and_baseline_importer(indexed_repository: Path) -> None:
+    (indexed_repository / "src" / "sample" / "helpers.py").unlink()
+    index = build_repository_index(indexed_repository)
+
+    report = build_changed_report(indexed_repository, index, base="HEAD")
+
+    assert report.changes[0].status is FileChangeStatus.DELETED
+    deleted = [item for item in report.changed_symbols if item.status is SymbolChangeStatus.DELETED]
+    assert [item.old.name for item in deleted if item.old] == ["normalize"]
+    importer = next(item for item in report.nodes if item.path == "src/sample/core.py")
+    assert any(item.source == "baseline_static_import" for item in importer.relationships)
+
+
+def test_changed_report_localises_moved_definition(indexed_repository: Path) -> None:
+    old = indexed_repository / "src" / "sample" / "helpers.py"
+    new = indexed_repository / "src" / "sample" / "utilities.py"
+    old.rename(new)
+    index = build_repository_index(indexed_repository)
+
+    report = build_changed_report(indexed_repository, index, base="HEAD")
+
+    assert report.changes[0].status is FileChangeStatus.RENAMED
+    moved = [item for item in report.changed_symbols if item.status is SymbolChangeStatus.MOVED]
+    assert len(moved) == 1
+    assert moved[0].old and moved[0].old.path == "src/sample/helpers.py"
+    assert moved[0].new and moved[0].new.path == "src/sample/utilities.py"
+
+
+def test_changed_report_localises_renamed_definition(indexed_repository: Path) -> None:
+    path = indexed_repository / "src" / "sample" / "helpers.py"
+    path.write_text("def clean(value: int) -> int:\n    return value\n", encoding="utf-8")
+    index = build_repository_index(indexed_repository)
+
+    report = build_changed_report(indexed_repository, index, base="HEAD")
+
+    renamed = [item for item in report.changed_symbols if item.status is SymbolChangeStatus.RENAMED]
+    assert len(renamed) == 1
+    assert renamed[0].old and renamed[0].old.name == "normalize"
+    assert renamed[0].new and renamed[0].new.name == "clean"
+
+
+def test_changed_report_ignores_gitlinks_in_baseline_snapshot(indexed_repository: Path) -> None:
+    commit = subprocess.run(
+        ["git", "-C", str(indexed_repository), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    _git(indexed_repository, "update-index", "--add", "--cacheinfo", f"160000,{commit},vendor/dependency")
+    _git(indexed_repository, "commit", "-m", "gitlink")
+    path = indexed_repository / "src" / "sample" / "helpers.py"
+    path.write_text("def normalize(value: int) -> int:\n    return abs(value)\n", encoding="utf-8")
+
+    report = build_changed_report(indexed_repository, build_repository_index(indexed_repository), base="HEAD")
+
+    assert "src/sample/helpers.py" in report.changed_files

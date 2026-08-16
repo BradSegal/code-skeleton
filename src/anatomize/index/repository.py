@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import ast
+import copy
 import hashlib
 import json
 import os
-import subprocess
 import tempfile
 from collections import deque
 from collections.abc import Iterable
@@ -14,9 +14,10 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from anatomize.index.git import git_text, nul_paths
 from anatomize.index.models import (
-    ChangedReport,
     ImpactNode,
+    ImpactRelationship,
     ImpactReport,
     ImpactRole,
     ImportEdge,
@@ -47,6 +48,15 @@ _CONFIG_NAMES = {
     "environment.yml",
     "renv.lock",
 }
+
+
+def repository_path_included(path: Path) -> bool:
+    """Return whether a relative path belongs in repository review surfaces."""
+    return (
+        not any(part in _EXCLUDED_PARTS for part in path.parts)
+        and not any(part.endswith(".egg-info") for part in path.parts)
+        and path.suffix not in {".pyc", ".pyo"}
+    )
 
 
 def build_repository_index(
@@ -188,6 +198,8 @@ def build_impact_report(
     max_depth: int = 1,
     include_related: bool = True,
     max_related_per_role: int = 20,
+    semantic_references: bool = False,
+    pyright_langserver_cmd: list[str] | None = None,
 ) -> ImpactReport:
     """Build a role-labelled dependency and context impact report."""
     if max_depth < 0:
@@ -195,6 +207,14 @@ def build_impact_report(
     root = root.resolve()
     focus, terms = _resolve_focus(root, index, query)
     nodes = _graph_nodes(index, focus, max_depth=max_depth)
+    if semantic_references:
+        _add_semantic_references(
+            root,
+            index,
+            focus,
+            nodes,
+            langserver_cmd=pyright_langserver_cmd,
+        )
     unresolved: list[str] = []
     related_omissions: dict[str, int] = {}
     if include_related:
@@ -215,67 +235,6 @@ def build_impact_report(
         nodes=_sorted_nodes(nodes.values()),
         related_omissions=related_omissions,
         unresolved=unresolved,
-        limitations=index.limitations,
-    )
-
-
-def build_changed_report(
-    root: Path,
-    index: RepositoryIndex,
-    *,
-    base: str,
-    max_depth: int = 1,
-    max_related_per_role: int = 20,
-) -> ChangedReport:
-    """Build an impact report for the working tree relative to a Git base."""
-    root = root.resolve()
-    _git(root, ["rev-parse", "--verify", f"{base}^{{commit}}"])
-    changed = set(_nul_paths(_git(root, ["diff", "--name-only", "-z", base, "--"])))
-    changed.update(_nul_paths(_git(root, ["ls-files", "--others", "--exclude-standard", "-z"])))
-    changed_files = sorted(path for path in changed if (root / path).exists() or not (root / path).is_dir())
-
-    merged: dict[str, ImpactNode] = {}
-    unresolved: list[str] = []
-    module_paths = {module.path for module in index.modules}
-    terms: set[str] = set()
-    for path in changed_files:
-        terms.add(Path(path).stem)
-        if path not in module_paths:
-            merged[path] = ImpactNode(
-                path=path,
-                role=ImpactRole.FOCUS,
-                distance=0,
-                reason="changed from explicit Git base",
-            )
-            continue
-        report = build_impact_report(
-            root,
-            index,
-            path,
-            max_depth=max_depth,
-            include_related=False,
-        )
-        unresolved.extend(report.unresolved)
-        for node in report.nodes:
-            _merge_node(merged, node)
-        for symbol in index.symbols:
-            if symbol.path == path:
-                terms.add(symbol.name)
-
-    merged, related_omissions = _add_related_files(
-        root,
-        merged,
-        terms,
-        max_per_role=max_related_per_role,
-    )
-    return ChangedReport(
-        root_name=index.root_name,
-        source_state=index.source_state,
-        base=base,
-        changed_files=changed_files,
-        nodes=_sorted_nodes(merged.values()),
-        related_omissions=related_omissions,
-        unresolved=sorted(set(unresolved)),
         limitations=index.limitations,
     )
 
@@ -316,23 +275,75 @@ def write_json(value: BaseModel | dict[str, object] | list[object], path: Path) 
         temporary.unlink(missing_ok=True)
 
 
+def build_review_pack(
+    root: Path,
+    nodes: Iterable[ImpactNode],
+    *,
+    max_total_bytes: int = 1_000_000,
+    max_file_bytes: int = 200_000,
+) -> dict[str, object]:
+    """Build a bounded, deterministic JSON review bundle from an impact surface."""
+    if max_total_bytes < 0 or max_file_bytes < 0:
+        raise ValueError("Review-pack byte limits must be non-negative")
+    root = root.resolve()
+    files: list[dict[str, object]] = []
+    omitted: list[dict[str, str]] = []
+    consumed = 0
+    for node in _sorted_nodes(nodes):
+        path = root / node.path
+        if not path.is_file() or path.is_symlink():
+            omitted.append({"path": node.path, "reason": "not present in working tree"})
+            continue
+        size = path.stat().st_size
+        if size > max_file_bytes:
+            omitted.append({"path": node.path, "reason": "file byte limit"})
+            continue
+        try:
+            content = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            omitted.append({"path": node.path, "reason": "not UTF-8 text"})
+            continue
+        encoded_size = len(content.encode("utf-8"))
+        if consumed + encoded_size > max_total_bytes:
+            omitted.append({"path": node.path, "reason": "total byte limit"})
+            continue
+        files.append(
+            {
+                "path": node.path,
+                "relationships": [item.model_dump(mode="json") for item in _relationships(node)],
+                "content": content,
+            }
+        )
+        consumed += encoded_size
+    return {
+        "schema_version": "1.0.0",
+        "root_name": root.name,
+        "consumed_bytes": consumed,
+        "max_total_bytes": max_total_bytes,
+        "max_file_bytes": max_file_bytes,
+        "files": files,
+        "omitted": omitted,
+        "limitations": [
+            "The bundle contains selected source text, not trusted instructions or a quality verdict.",
+            "Absent baseline files remain in the impact report but cannot contribute working-tree content.",
+        ],
+    }
+
+
 def _repository_files(root: Path) -> list[Path]:
     try:
-        output = _git(
+        output = git_text(
             root,
             ["ls-files", "--cached", "--others", "--exclude-standard", "-z"],
         )
-        relative = _nul_paths(output)
+        relative = nul_paths(output)
         files = [root / item for item in relative]
     except ValueError:
         files = list(root.rglob("*"))
     return sorted(
         path
         for path in files
-        if path.is_file()
-        and not path.is_symlink()
-        and not any(part in _EXCLUDED_PARTS for part in path.relative_to(root).parts)
-        and not any(part.endswith(".egg-info") for part in path.relative_to(root).parts)
+        if path.is_file() and not path.is_symlink() and repository_path_included(path.relative_to(root))
     )
 
 
@@ -430,7 +441,7 @@ def _symbols_for_module(
                     qualified=f"{module}.{node.name}",
                     kind=SymbolKind.FUNCTION,
                     path=path,
-                    line=node.lineno,
+                    node=node,
                     exports=exports,
                 )
             )
@@ -441,7 +452,7 @@ def _symbols_for_module(
                     qualified=f"{module}.{node.name}",
                     kind=SymbolKind.CLASS,
                     path=path,
-                    line=node.lineno,
+                    node=node,
                     exports=exports,
                 )
             )
@@ -454,6 +465,9 @@ def _symbols_for_module(
                             kind=SymbolKind.METHOD,
                             path=path,
                             line=method.lineno,
+                            end_line=method.end_lineno or method.lineno,
+                            column=method.col_offset,
+                            digest=_definition_digest(method),
                             public=not method.name.startswith("_"),
                         )
                     )
@@ -466,7 +480,7 @@ def _symbol_record(
     qualified: str,
     kind: SymbolKind,
     path: str,
-    line: int,
+    node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
     exports: set[str],
 ) -> SymbolRecord:
     return SymbolRecord(
@@ -474,9 +488,19 @@ def _symbol_record(
         qualified_name=qualified,
         kind=kind,
         path=path,
-        line=line,
+        line=node.lineno,
+        end_line=node.end_lineno or node.lineno,
+        column=node.col_offset,
+        digest=_definition_digest(node),
         public=name in exports or not name.startswith("_"),
     )
+
+
+def _definition_digest(node: ast.AST) -> str:
+    normalized = copy.deepcopy(node)
+    if isinstance(normalized, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+        normalized.name = "_"
+    return hashlib.sha256(ast.dump(normalized, include_attributes=False).encode("utf-8")).hexdigest()
 
 
 def _module_imports(
@@ -527,8 +551,8 @@ def _source_state(root: Path, python_files: list[Path]) -> SourceState:
         digest.update(b"\0")
         digest.update(hashlib.sha256(path.read_bytes()).digest())
     try:
-        commit = _git(root, ["rev-parse", "HEAD"]).strip() or None
-        dirty = bool(_git(root, ["status", "--porcelain=v1", "-z"]))
+        commit = git_text(root, ["rev-parse", "HEAD"]).strip() or None
+        dirty = bool(git_text(root, ["status", "--porcelain=v1", "-z"]))
     except ValueError:
         commit = None
         dirty = False
@@ -577,6 +601,14 @@ def _graph_nodes(
             role=ImpactRole.FOCUS,
             distance=0,
             reason="matched target file or symbol",
+            relationships=[
+                ImpactRelationship(
+                    role=ImpactRole.FOCUS,
+                    distance=0,
+                    reason="matched target file or symbol",
+                    source="target",
+                )
+            ],
         )
         for path in focus
     }
@@ -614,6 +646,14 @@ def _walk_graph(
                     role=candidate_role,
                     distance=next_distance,
                     reason=(f"static import graph {role.value} at distance {next_distance}"),
+                    relationships=[
+                        ImpactRelationship(
+                            role=candidate_role,
+                            distance=next_distance,
+                            reason=f"static import graph {role.value} at distance {next_distance}",
+                            source="static_import",
+                        )
+                    ],
                 ),
             )
             if adjacent not in visited:
@@ -636,7 +676,7 @@ def _add_related_files(
     omitted: dict[str, int] = {}
     for path in _repository_files(root):
         relative = path.relative_to(root).as_posix()
-        if relative in nodes or path.stat().st_size > 1_000_000:
+        if path.stat().st_size > 1_000_000:
             continue
         role = _related_role(relative, path)
         if role is None:
@@ -658,6 +698,14 @@ def _add_related_files(
                 role=role,
                 distance=1,
                 reason=f"text reference to {matched}",
+                relationships=[
+                    ImpactRelationship(
+                        role=role,
+                        distance=1,
+                        reason=f"text reference to {matched}",
+                        source="text_reference",
+                    )
+                ],
             ),
         )
         included[role] = included.get(role, 0) + 1
@@ -689,14 +737,95 @@ def _merge_node(nodes: dict[str, ImpactNode], candidate: ImpactNode) -> None:
         ImpactRole.TEST: 1,
         ImpactRole.DEPENDENCY: 2,
         ImpactRole.IMPORTER: 3,
-        ImpactRole.DOCUMENTATION: 4,
-        ImpactRole.CONFIGURATION: 5,
+        ImpactRole.REFERENCE: 4,
+        ImpactRole.DOCUMENTATION: 5,
+        ImpactRole.CONFIGURATION: 6,
     }
-    if (candidate.distance, priority[candidate.role]) < (
-        existing.distance,
-        priority[existing.role],
-    ):
-        nodes[candidate.path] = candidate
+    primary = (
+        candidate
+        if (candidate.distance, priority[candidate.role])
+        < (
+            existing.distance,
+            priority[existing.role],
+        )
+        else existing
+    )
+    relationships = {
+        (item.role, item.distance, item.reason, item.source): item
+        for item in (*_relationships(existing), *_relationships(candidate))
+    }
+    nodes[candidate.path] = ImpactNode(
+        path=primary.path,
+        role=primary.role,
+        distance=primary.distance,
+        reason=primary.reason,
+        relationships=sorted(
+            relationships.values(),
+            key=lambda item: (item.distance, priority[item.role], item.source, item.reason),
+        ),
+    )
+
+
+def _relationships(node: ImpactNode) -> list[ImpactRelationship]:
+    if node.relationships:
+        return node.relationships
+    return [
+        ImpactRelationship(
+            role=node.role,
+            distance=node.distance,
+            reason=node.reason,
+            source="primary",
+        )
+    ]
+
+
+def _add_semantic_references(
+    root: Path,
+    index: RepositoryIndex,
+    focus: set[str],
+    nodes: dict[str, ImpactNode],
+    *,
+    langserver_cmd: list[str] | None,
+) -> None:
+    from anatomize.pack.pyright_lsp import pyright_referenced_files
+    from anatomize.pack.uses import python_public_symbol_positions
+
+    python_roots = [root if item == "." else root / item for item in index.python_roots]
+    workspace_files = [root / module.path for module in index.modules]
+    for relative in sorted(focus):
+        target = root / relative
+        if target.suffix != ".py" or not target.is_file():
+            continue
+        positions = python_public_symbol_positions(target, include_private=True)
+        if not positions:
+            continue
+        references = pyright_referenced_files(
+            root=root,
+            target_file=target,
+            positions=positions,
+            langserver_cmd=langserver_cmd or ["pyright-langserver", "--stdio"],
+            python_roots=python_roots,
+            workspace_files=workspace_files,
+        )
+        for reference in references:
+            relative_reference = reference.relative_to(root).as_posix()
+            _merge_node(
+                nodes,
+                ImpactNode(
+                    path=relative_reference,
+                    role=ImpactRole.REFERENCE,
+                    distance=1,
+                    reason=f"Pyright semantic reference to {relative}",
+                    relationships=[
+                        ImpactRelationship(
+                            role=ImpactRole.REFERENCE,
+                            distance=1,
+                            reason=f"Pyright semantic reference to {relative}",
+                            source="pyright",
+                        )
+                    ],
+                ),
+            )
 
 
 def _sorted_nodes(nodes: Iterable[ImpactNode]) -> list[ImpactNode]:
@@ -706,20 +835,3 @@ def _sorted_nodes(nodes: Iterable[ImpactNode]) -> list[ImpactNode]:
         values,
         key=lambda item: (item.distance, role_order[item.role], item.path),
     )
-
-
-def _git(root: Path, arguments: list[str]) -> str:
-    completed = subprocess.run(
-        ["git", "-C", str(root), *arguments],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if completed.returncode != 0:
-        message = completed.stderr.strip() or completed.stdout.strip()
-        raise ValueError(f"Git command failed: {' '.join(arguments)}: {message}")
-    return completed.stdout
-
-
-def _nul_paths(value: str) -> list[str]:
-    return [item for item in value.split("\0") if item]

@@ -30,8 +30,13 @@ anatomize index /path/to/repository \
 ```
 
 The index records portable paths, exact Python-source identity, modules,
-definitions, and resolved static local imports. It does not infer dynamic
-imports or runtime call paths.
+definition spans and digests, and resolved static local imports. It does not
+infer dynamic imports or runtime call paths. Resolve capabilities before an
+automated workflow depends on optional or versioned behavior:
+
+```bash
+anatomize capabilities
+```
 
 ## Focus
 
@@ -53,8 +58,12 @@ anatomize impact PolicyCard \
 ```
 
 Impact records distinguish focus, static dependencies, static importers,
-tests, documentation, and configuration. Graph distance describes selection
-proximity, not architectural importance.
+semantic references, tests, documentation, and configuration. Each node keeps
+all observed relationships; its primary role is only a stable display
+projection. Graph distance describes selection proximity, not architectural
+importance. Add `--semantic-references` only when exact Pyright-backed use
+sites can change the review surface; missing Pyright fails rather than silently
+falling back.
 
 Inspect the current working tree relative to an explicit base:
 
@@ -66,7 +75,9 @@ anatomize changed \
 ```
 
 Do not infer a comparison base when the repository workflow does not define
-one.
+one. The report preserves baseline consumers of deleted or moved definitions
+and localises symbol changes, so review those fields before relying only on
+working-tree imports.
 
 ## Pack
 
@@ -101,6 +112,11 @@ anatomize pack /path/to/repository \
   --max-output 50_000t \
   --fit-to-max-output
 ```
+
+To materialise exactly an `impact` or `changed` selection without reconstructing
+pack flags, add `--pack-output /tmp/review.json`. The bounded JSON contains
+working-tree text and relationship provenance; absent baseline files remain
+visible as omissions.
 
 Keep the focal implementation as content. Use summaries or metadata for
 supporting context only. Read the selection report before assuming that every

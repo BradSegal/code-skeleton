@@ -21,6 +21,7 @@ class ImpactRole(str, Enum):
     FOCUS = "focus"
     DEPENDENCY = "dependency"
     IMPORTER = "importer"
+    REFERENCE = "reference"
     TEST = "test"
     DOCUMENTATION = "documentation"
     CONFIGURATION = "configuration"
@@ -45,6 +46,9 @@ class SymbolRecord(BaseModel):
     kind: SymbolKind
     path: str
     line: int
+    end_line: int
+    column: int
+    digest: str
     public: bool
 
     model_config = {"frozen": True}
@@ -87,13 +91,25 @@ class RepositoryIndex(BaseModel):
     model_config = {"frozen": True}
 
 
+class ImpactRelationship(BaseModel):
+    """One independently preserved reason for selecting a file."""
+
+    role: ImpactRole
+    distance: int
+    reason: str
+    source: str
+
+    model_config = {"frozen": True}
+
+
 class ImpactNode(BaseModel):
-    """One role-labelled file in an impact surface."""
+    """One selected file with a stable primary role and all relationships."""
 
     path: str
     role: ImpactRole
     distance: int
     reason: str
+    relationships: list[ImpactRelationship] = Field(default_factory=list)
 
     model_config = {"frozen": True}
 
@@ -114,6 +130,46 @@ class ImpactReport(BaseModel):
     model_config = {"frozen": True}
 
 
+class FileChangeStatus(str, Enum):
+    """Git-visible file change kinds."""
+
+    ADDED = "added"
+    MODIFIED = "modified"
+    DELETED = "deleted"
+    RENAMED = "renamed"
+
+
+class FileChange(BaseModel):
+    """One path-level change relative to an explicit base."""
+
+    status: FileChangeStatus
+    old_path: str | None = None
+    new_path: str | None = None
+    similarity: int | None = None
+
+    model_config = {"frozen": True}
+
+
+class SymbolChangeStatus(str, Enum):
+    """Definition-level change kinds."""
+
+    ADDED = "added"
+    MODIFIED = "modified"
+    DELETED = "deleted"
+    MOVED = "moved"
+    RENAMED = "renamed"
+
+
+class SymbolChange(BaseModel):
+    """One definition-level change with old and new locations when available."""
+
+    status: SymbolChangeStatus
+    old: SymbolRecord | None = None
+    new: SymbolRecord | None = None
+
+    model_config = {"frozen": True}
+
+
 class ChangedReport(BaseModel):
     """Impact surface for files changed from an explicit Git base."""
 
@@ -121,7 +177,10 @@ class ChangedReport(BaseModel):
     root_name: str
     source_state: SourceState
     base: str
+    base_commit: str
     changed_files: list[str]
+    changes: list[FileChange] = Field(default_factory=list)
+    changed_symbols: list[SymbolChange] = Field(default_factory=list)
     nodes: list[ImpactNode]
     related_omissions: dict[str, int] = Field(default_factory=dict)
     unresolved: list[str] = Field(default_factory=list)

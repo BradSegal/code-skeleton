@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- Preserve symbol spans and definition-level changes across explicit Git bases.
+- Retain multiple import, reference, test, documentation, and configuration reasons per impact node.
+- Preserve baseline consumers for deleted and moved definitions.
+- Add machine-readable capability discovery, optional explicit Pyright references, and bounded impact-derived review bundles.
+
 All notable changes to this project will be documented in this file.
 
 ## 1.0.0 - 2026-07-29

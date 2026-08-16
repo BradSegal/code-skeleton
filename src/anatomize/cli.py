@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import json
 import logging
+import shlex
+import shutil
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Annotated
@@ -44,6 +46,39 @@ logger = logging.getLogger(__name__)
 
 class _Preset(str, Enum):
     STANDARD = "standard"
+
+
+@app.command("capabilities")
+def repository_capabilities() -> None:
+    """Describe machine-readable repository-intelligence capabilities."""
+    from anatomize.version import __version__
+
+    pyright = shutil.which("pyright-langserver")
+    _echo_json(
+        {
+            "schema_version": "1.0.0",
+            "anatomize_version": __version__,
+            "repository_intelligence": {
+                "portable_index": True,
+                "symbol_spans": True,
+                "multiple_relationships": True,
+                "explicit_base_changes": ["added", "modified", "deleted", "renamed"],
+                "changed_symbols": ["added", "modified", "deleted", "moved", "renamed"],
+                "baseline_consumers": True,
+                "bounded_review_pack": True,
+                "semantic_references": {
+                    "available": pyright is not None,
+                    "backend": "pyright",
+                    "executable": pyright,
+                    "failure_mode": "explicit",
+                },
+            },
+            "limitations": [
+                "Repository intelligence describes source relationships and does not judge code quality.",
+                "Static imports and text references do not prove runtime behavior.",
+            ],
+        }
+    )
 
 
 def version_callback(value: bool) -> None:
@@ -743,12 +778,29 @@ def repository_impact(
             help="Maximum heuristic text references per supporting role.",
         ),
     ] = 20,
+    semantic_references: Annotated[
+        bool,
+        typer.Option("--semantic-references", help="Add Pyright references; unavailable backends fail explicitly."),
+    ] = False,
+    pyright_langserver_cmd: Annotated[
+        str,
+        typer.Option("--pyright-langserver-cmd", help="Pyright language-server command."),
+    ] = "pyright-langserver --stdio",
+    pack_output: Annotated[
+        Path | None,
+        typer.Option("--pack-output", help="Write a bounded JSON content bundle for the selected impact surface."),
+    ] = None,
+    max_pack_bytes: Annotated[
+        int,
+        typer.Option("--max-pack-bytes", min=0, help="Maximum aggregate source bytes in --pack-output."),
+    ] = 1_000_000,
 ) -> None:
     """Explain the files affected by a target and why they were selected."""
     try:
         from anatomize.index import (
             build_impact_report,
             build_repository_index,
+            build_review_pack,
             load_repository_index,
             write_json,
         )
@@ -763,6 +815,8 @@ def repository_impact(
             query,
             max_depth=max_depth,
             max_related_per_role=max_related_per_role,
+            semantic_references=semantic_references,
+            pyright_langserver_cmd=shlex.split(pyright_langserver_cmd),
         )
         if output is None:
             _echo_json(report.model_dump(mode="json"))
@@ -770,6 +824,10 @@ def repository_impact(
             resolved_output = _root_relative(root, output)
             write_json(report, resolved_output)
             typer.echo(f"Wrote: {resolved_output}")
+        if pack_output is not None:
+            resolved_pack = _root_relative(root, pack_output)
+            write_json(build_review_pack(root, report.nodes, max_total_bytes=max_pack_bytes), resolved_pack)
+            typer.echo(f"Wrote review pack: {resolved_pack}")
         if report.unresolved:
             raise typer.Exit(1)
     except ValueError as exc:
@@ -814,12 +872,29 @@ def changed_repository_impact(
             help="Maximum heuristic text references per supporting role.",
         ),
     ] = 20,
+    semantic_references: Annotated[
+        bool,
+        typer.Option("--semantic-references", help="Add Pyright references; unavailable backends fail explicitly."),
+    ] = False,
+    pyright_langserver_cmd: Annotated[
+        str,
+        typer.Option("--pyright-langserver-cmd", help="Pyright language-server command."),
+    ] = "pyright-langserver --stdio",
+    pack_output: Annotated[
+        Path | None,
+        typer.Option("--pack-output", help="Write a bounded JSON content bundle for the changed impact surface."),
+    ] = None,
+    max_pack_bytes: Annotated[
+        int,
+        typer.Option("--max-pack-bytes", min=0, help="Maximum aggregate source bytes in --pack-output."),
+    ] = 1_000_000,
 ) -> None:
     """Explain working-tree impact relative to an explicit Git base."""
     try:
         from anatomize.index import (
             build_changed_report,
             build_repository_index,
+            build_review_pack,
             load_repository_index,
             write_json,
         )
@@ -834,6 +909,8 @@ def changed_repository_impact(
             base=base,
             max_depth=max_depth,
             max_related_per_role=max_related_per_role,
+            semantic_references=semantic_references,
+            pyright_langserver_cmd=shlex.split(pyright_langserver_cmd),
         )
         if output is None:
             _echo_json(report.model_dump(mode="json"))
@@ -841,6 +918,10 @@ def changed_repository_impact(
             resolved_output = _root_relative(root, output)
             write_json(report, resolved_output)
             typer.echo(f"Wrote: {resolved_output}")
+        if pack_output is not None:
+            resolved_pack = _root_relative(root, pack_output)
+            write_json(build_review_pack(root, report.nodes, max_total_bytes=max_pack_bytes), resolved_pack)
+            typer.echo(f"Wrote review pack: {resolved_pack}")
     except ValueError as exc:
         typer.echo(f"Error: {exc}", err=True)
         raise typer.Exit(1)
