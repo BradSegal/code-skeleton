@@ -3,7 +3,7 @@
     "artifact_type": "anatomize.dossier",
     "base_dossier_id": null,
     "boundary": {
-      "authority": "Anatomize supplies source-bound evidence and does not choose, apply, or approve a change.",
+      "authority": "Anatomize reports evidence from this checkout; the reviewer decides and approves any change.",
       "profile": "change_review",
       "question": "Bind the exact baseline revision.",
       "satisfied_stop_conditions": [
@@ -42,19 +42,19 @@
       },
       "payload_bytes": {
         "limit": 49152,
-        "used": 3409
+        "used": 3398
       }
     },
     "content": [],
-    "dossier_id": "dossier:sha256:b5f6d26a19b41dd979e7fd20e38fe777a2fdf1b81225ca5c75ae6e0ee6ecbfc1",
+    "dossier_id": "dossier:sha256:c1621e8eb0bb366ec849c7a764e71a3cc90e90fb6f0c895bad3772d4a301165d",
     "expansions": [],
     "groups": [
       {
-        "group_id": "dossier-group:sha256:abdb6f0b509f2e00bbd4670c7568f62683bd8656ab5e19aa52e0de373dbdde0f",
+        "group_id": "dossier-group:sha256:1474e44d0ed4e24f081888807022a2cbf534c3856ae6ca6d5566e19a7f54cb21",
         "item_ids": [
           "dossier-item:sha256:32f506029c2c6b979b1e4e205597d03fe919e282c215d03de88c302436510c7a"
         ],
-        "proof_purpose": "Bind the exact source state represented by this dossier.",
+        "proof_purpose": "Identify the exact checkout reviewed here.",
         "required": true,
         "role": "state",
         "section": "decision_critical"

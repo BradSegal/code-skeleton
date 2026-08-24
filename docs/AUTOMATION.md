@@ -87,8 +87,9 @@ source inclusion.
 
 Start with orientation, then ask one targeted question. Prefer a stable file,
 symbol, test, documentation section, workflow, data item, or diagnostic over a
-repository-wide implementation request. Dossiers select required proof roles
-before optional context and preserve every reason an item was selected.
+repository-wide implementation request. Dossiers select the evidence purposes
+required by the task before optional context and preserve every reason an item
+was selected. The JSON field for an evidence purpose is `proof_role`.
 
 If a result is partial, choose an advertised action and preserve its opaque
 `action_id`. Actions support bounded budget increases, relationship traversal,

@@ -305,6 +305,9 @@ def test_query_expansion_and_accessible_review_artifacts_share_one_result(tmp_pa
     assert "src/maths.py:1:0" in text
     assert "## Omissions and unknowns" in markdown
     assert "## Expansion actions" in markdown
+    assert "provider run(s)" not in markdown
+    assert "canonical repository entity" not in markdown
+    assert "specialist" not in markdown.casefold()
     assert exchange.dossier.dossier_id in markdown
     assert exchange.dossier.source_state_ids[0] in markdown
     assert all(not line.endswith(" ") for line in text.splitlines())

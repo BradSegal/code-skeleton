@@ -1,4 +1,4 @@
-"""Consolidation review dossiers and consumer-owned decision overlays."""
+"""Consolidation evidence and reviewer-owned decision records."""
 
 from __future__ import annotations
 

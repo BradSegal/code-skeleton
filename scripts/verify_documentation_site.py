@@ -108,7 +108,7 @@ def verify(root: Path, site_dir: Path) -> dict[str, object]:
     if ":focus-visible" not in css or "prefers-reduced-motion" not in css:
         raise ValueError("Custom presentation must preserve focus and reduced-motion behavior")
     index = (site_dir / "index.html").read_text(encoding="utf-8")
-    for phrase in ("Review a repository", "Integrate an agent", "Build a provider"):
+    for phrase in ("Review a repository", "Integrate an agent", "Import results from another tool"):
         if phrase not in index:
             raise ValueError(f"Site home omits the {phrase!r} entry path")
     return {

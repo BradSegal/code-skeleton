@@ -42,8 +42,8 @@ anatomize review dossier review/before.json \
 
 Read the dossier status before its items:
 
-- `complete` means every required proof role was available within the declared
-  boundary.
+- `complete` means every required evidence category was available within the
+  requested scope.
 - `partial` means useful evidence exists but a budget, provider, or scope left
   material omissions.
 - `blocked` means the question cannot be answered defensibly from the current
@@ -67,7 +67,7 @@ anatomize review dossier review/before.json src/anatomize/review/application.py 
 
 The result groups the target definition, inbound and outbound relationships,
 consumers, tests, documentation, contracts, diagnostics, conflicts, and gaps
-by proof role. This is the context to inspect before editing, not a source dump.
+by purpose. This is the context to inspect before editing, not a source dump.
 
 ## Deduplicate and consolidate
 
@@ -88,9 +88,11 @@ The similarity artifact can contain implementation, test, and documentation
 candidates. If two path-normalisation helpers match, a consolidation dossier
 tests that resemblance against their behaviour, differences, consumers, tests,
 documentation, runtime evidence, contracts, history, conflicts, and unknowns.
-The consumer then records `merge`, `keep`, or `postpone` in a decision overlay
-with an owner and rationale. Imported jscpd regions can improve discovery, but
-the decision still depends on the complete adjudication surface.
+The reviewer then records `merge`, `keep`, or `postpone` with an owner and
+rationale. The JSON decision record is called an overlay because it adds
+judgement without changing the observed evidence. Imported jscpd regions can
+improve discovery, but the decision still depends on behaviour, callers,
+tests, documentation, contracts, history, conflicts, and remaining unknowns.
 
 ## Implement against explicit obligations
 
@@ -138,7 +140,7 @@ Keep canonical JSON for exact machine traceability. Export Markdown for the
 smallest set that materially helps a code reviewer:
 
 1. the targeted implementation or consolidation dossier;
-2. the decision overlay and rationale;
+2. the decision record (overlay) and rationale;
 3. the evidence-wide change dossier;
 4. relevant native test or analysis evidence; and
 5. the closure report.

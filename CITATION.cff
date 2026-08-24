@@ -5,7 +5,7 @@ title: "Anatomize: evidence-first repository review for agentic development"
 authors:
   - family-names: Segal
     given-names: Bradley Max
-version: 2.0.0
+version: 2.0.1
 date-released: 2026-08-24
 license: MIT
 repository-code: "https://github.com/BradSegal/anatomize"

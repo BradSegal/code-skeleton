@@ -24,7 +24,7 @@ PUBLIC_NAMESPACES = {
     "anatomize.identity": "Portable identities, coordinates, and cross-provider reconciliation.",
     "anatomize.providers": "Data-only provider envelopes, normalization, and conformance.",
     "anatomize.sessions": "Portable sessions and immutable recoverable generations.",
-    "anatomize.dossiers": "Task targets, proof roles, budgets, selection, and expansion.",
+    "anatomize.dossiers": "Task targets, evidence groups, limits, selection, and expansion.",
     "anatomize.temporal": "Exact source states and evidence-wide comparison.",
     "anatomize.lifecycle": "Similarity, decisions, implementation intent, change, and closure.",
     "anatomize.semantic": "Captured language-server semantic artifacts.",

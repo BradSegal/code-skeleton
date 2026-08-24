@@ -57,7 +57,7 @@ def review_start_command(
         list[Path],
         typer.Option(
             "--provider",
-            help="Import an exact provider-envelope artifact; no provider is discovered or executed.",
+            help="Import an advanced normalized evidence file; Anatomize does not run its producer.",
         ),
     ] = [],
     artifact: Annotated[
@@ -190,7 +190,7 @@ def review_dossier_command(
     ] = [],
     provider: Annotated[
         list[str],
-        typer.Option("--provider", help="Restrict evidence to already-bound provider identities."),
+        typer.Option("--provider", help="Restrict evidence to named imported evidence sources."),
     ] = [],
     include: Annotated[list[str], typer.Option("--include", help="Force an exact evidence identity into scope.")] = [],
     exclude: Annotated[list[str], typer.Option("--exclude", help="Exclude an exact evidence identity.")] = [],
@@ -376,7 +376,7 @@ def review_overlay_create_command(
     similarity: Annotated[Path, typer.Argument(help="Source-bound similarity JSON artifact.")],
     candidate: Annotated[str, typer.Argument(help="Exact similarity candidate_id.")],
     disposition: Annotated[str, typer.Option("--disposition", help="Consumer decision disposition.")],
-    rationale: Annotated[str, typer.Option("--rationale", help="Consumer-owned qualitative rationale.")],
+    rationale: Annotated[str, typer.Option("--rationale", help="Reviewer's reason for the decision.")],
     owner: Annotated[str, typer.Option("--owner", help="Stable consumer or review namespace.")],
     preserved_divergence: Annotated[
         list[str], typer.Option("--preserved-divergence", help="Difference that must remain distinct.")
@@ -388,7 +388,7 @@ def review_overlay_create_command(
     format: Annotated[str, typer.Option("--format", "-f", help="Output format: text, json, or markdown.")] = "json",
     width: Annotated[int, typer.Option("--width", help="Plain-text wrap width (minimum 40).")] = 88,
 ) -> None:
-    """Create a portable consumer-owned decision without mutating evidence."""
+    """Record a review decision and rationale without changing the evidence."""
     try:
         from anatomize.lifecycle import DecisionDisposition, SimilarityArtifact
         from anatomize.review import ReviewApplication, load_review_artifact

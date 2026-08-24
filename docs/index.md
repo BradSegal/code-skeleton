@@ -2,7 +2,7 @@
 
 Anatomize helps agents and people inspect an unfamiliar repository, localise a
 change, review duplication, and verify the result. It produces compact Markdown
-for review and canonical JSON for automation.
+for review and stable, versioned JSON for automation.
 
 <div class="anatomize-hero" markdown>
 
@@ -46,12 +46,13 @@ read-only MCP server. Expand partial results without repeating the review.
 
 <div class="anatomize-path" markdown>
 
-### Build a provider
+### Import results from another tool
 
-Import SARIF, JUnit, coverage, mutation, jscpd, workflow, dependency, and
-research artifacts, or supply a conformant `ProviderEnvelope`.
+Add saved SARIF, JUnit, coverage, mutation, duplication, workflow, dependency,
+or research results. Authors of new integrations can use the advanced provider
+format.
 
-[Add provider evidence](PROVIDERS.md)
+[Import tool results](PROVIDERS.md)
 
 </div>
 
@@ -89,7 +90,7 @@ unavailable evidence.
 
 Anatomize does not execute repository code or approve changes. Run the
 repository's own tests, linters, documentation checks, security tools, and
-research validations, then import their artifacts where they help the review.
+research validations, then import their saved results where they help the review.
 Source text is excluded from sessions unless explicitly requested.
 
 For exact commands, schemas, and public Python names, use the

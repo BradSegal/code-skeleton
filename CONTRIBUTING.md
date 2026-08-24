@@ -21,7 +21,7 @@ package metadata and do not require uv.
   presentation in their owning packages; do not make a lower-level package
   call the review application.
 - Reuse shared path, identity, serialization, import, and error contracts.
-- Integrate specialist tools through an existing interchange before adding a
+- Integrate external analysis tools through an existing interchange before adding a
   vendor-specific adapter. Never add implicit tool execution or discovery.
 - Preserve provider provenance, conflicts, completeness, omissions, and
   limitations. Candidates must never encode an edit or deletion verdict.

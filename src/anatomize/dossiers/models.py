@@ -426,7 +426,7 @@ class DossierItem(EvidenceModel):
 
 
 class DossierGroup(EvidenceModel):
-    """Stable proof-role grouping in reader order."""
+    """Evidence items grouped by their purpose in reader order."""
 
     group_id: str = Field(min_length=1)
     section: DossierSection

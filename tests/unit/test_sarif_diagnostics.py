@@ -36,7 +36,7 @@ from anatomize.evidence import (
 )
 from anatomize.providers import ProviderEnvelope, canonical_provider_bytes
 
-FIXTURE = Path(__file__).parents[1] / "fixtures" / "diagnostics" / "specialist-tools.sarif"
+FIXTURE = Path(__file__).parents[1] / "fixtures" / "diagnostics" / "analysis-results.sarif"
 SOURCES = {
     "src/app.py": 'def unused():\n    password = "example"\n    return dangerous(password)\n',
     "R/analysis.R": "result <- mean(values)\n",
@@ -187,7 +187,7 @@ def test_sarif_parser_preserves_standard_diagnostic_semantics_and_order() -> Non
         assert error.value.code == code
 
 
-def test_specialist_runs_map_through_one_contract_without_core_tool_dependencies() -> None:
+def test_external_analysis_runs_map_through_one_contract_without_runtime_tool_dependencies() -> None:
     envelopes = _normalize()
     by_tool = {item.tool.name: item for item in envelopes}
     assert set(by_tool) == {

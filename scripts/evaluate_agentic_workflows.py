@@ -421,7 +421,7 @@ def evaluate_task(
             "## Evidence",
             "## Omissions and unknowns",
             "## Expansion actions",
-            "Authority: Anatomize supplies source-bound evidence",
+            "Authority: Anatomize reports evidence from this checkout",
         )
     )
     correct = (

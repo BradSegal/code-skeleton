@@ -10,8 +10,8 @@ validated object.
 | Review session | `review start` | Reuse one exact evidence state across questions | JSON |
 | Dossier exchange | `review dossier` / `expand` | Answer one bounded orientation, design, audit, localisation, implementation, change-review, or closure question | Markdown plus JSON when traceability matters |
 | Similarity artifact | `review similarity` | Discover conservative implementation, test, and documentation candidates | JSON |
-| Consolidation dossier | `review consolidate` | Adjudicate one candidate against differences and consequences | Markdown |
-| Decision overlay | `review overlay-create` | Preserve a consumer-owned disposition, owner, rationale, and review conditions | JSON or Markdown |
+| Consolidation dossier | `review consolidate` | Decide whether one possible duplicate should be merged, kept, or investigated further | Markdown |
+| Decision record (overlay) | `review overlay-create` | Preserve your disposition, owner, rationale, and review conditions separately from observed evidence | JSON or Markdown |
 | Overlay evaluation | `review overlay-check` | Determine whether relevant evidence changed after a decision | Markdown |
 | Implementation intent | `review intent` | Bind explicit obligations to the exact before-state | JSON |
 | Change dossier | `review change` | Compare canonical evidence across independent states | Markdown plus JSON |
@@ -24,7 +24,7 @@ Read in this order:
 
 1. **Status** — whether the evidence is complete, partial, or blocked.
 2. **Question and targets** — the exact decision boundary the dossier answers.
-3. **Proof-role groups** — why each fact matters, not merely where it was found.
+3. **Evidence groups** — why each fact matters, not merely where it was found.
 4. **Conflicts** — incompatible source-bound claims preserved without ranking.
 5. **Omissions and limitations** — absent evidence and what the methods cannot
    establish.

@@ -13,9 +13,9 @@ Only exact schemas advertised by this release are accepted:
 anatomize review capabilities --format json
 ```
 
-There is no migration layer. Regenerate a session from source or reacquire the
-specialist artifact with the current producer. Do not edit `schema_version`,
-IDs, or digests.
+There is no migration layer. Regenerate a session from source or rerun the tool
+that created the rejected result file. Do not edit `schema_version`, IDs, or
+digests.
 
 ## An artifact is stale
 
@@ -44,10 +44,11 @@ If no generation validates, remove or archive only that derived store and run
 `review start` again. The checkout and portable artifacts are authoritative;
 the store is disposable acceleration.
 
-## A provider is unavailable
+## Results from another tool are unavailable
 
-The baseline requires no optional tool. Run a specialist tool separately under
-your own authority, capture a supported artifact, and import it explicitly:
+Anatomize can still map the repository without optional tools. Run the linter,
+test runner, coverage tool, scanner, or workflow tool separately, save its
+result in a supported format, and import that file explicitly:
 
 ```bash
 anatomize review start . \
@@ -55,8 +56,9 @@ anatomize review start . \
   --format json --output session.json
 ```
 
-If the provider cannot run, retain an unavailable or partial status. Do not
-turn absence into a complete empty result.
+If the tool cannot run, retain an unavailable or partial status. Do not turn
+absence into a complete empty result. In JSON, the tool and its imported result
+are represented as a `provider`.
 
 ## A native artifact is rejected
 
@@ -90,9 +92,9 @@ anatomize review expand session.json exchange.json ACTION_ID \
   --format json --output expanded.json
 ```
 
-If a proof role is genuinely unavailable, acquire that evidence or record that
-the decision cannot yet close. Raising every budget is not a substitute for a
-precise target.
+If a required evidence category is genuinely unavailable, acquire that
+evidence or record that the decision cannot yet close. Raising every budget is
+not a substitute for a precise target.
 
 ## An expansion is rejected
 

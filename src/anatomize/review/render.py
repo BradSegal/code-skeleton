@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from anatomize._artifacts import canonical_ordered_json_bytes
-from anatomize.dossiers import DossierGroup, DossierItem, DossierOmission, EvidenceLocator
+from anatomize.dossiers import DossierGroup, DossierItem, DossierOmission, EvidenceLocator, EvidenceRole
 from anatomize.review.models import DossierExchange
 
 
@@ -44,7 +44,7 @@ def _dossier_text(exchange: DossierExchange, width: int) -> str:
         f"Review dossier: {request.profile.value} / {dossier.status.value}",
         f"Question: {request.question}",
         f"Repository: {dossier.repository_id}",
-        f"Evidence: {len(dossier.items)} items from {len(dossier.provider_run_ids)} provider run(s)",
+        f"Evidence: {len(dossier.items)} items from {len(dossier.provider_run_ids)} source(s)",
         "",
     ]
     if dossier.boundary.targets:
@@ -90,16 +90,12 @@ def _dossier_text(exchange: DossierExchange, width: int) -> str:
 
 def _text_group(group: DossierGroup, items: dict[str, DossierItem], width: int) -> list[str]:
     required = "required" if group.required else "supporting"
-    lines = [f"{group.section.value.replace('_', ' ').title()} / {group.role.value} ({required})"]
+    lines = [f"{group.section.value.replace('_', ' ').title()} / {_group_heading(group.role)} ({required})"]
     lines.extend(_wrapped(group.proof_purpose, width))
     for item_id in group.item_ids:
         item = items[item_id]
         locator = _best_locator(item.locators)
-        description = (
-            f"{locator} — {item.record_kind}"
-            if locator
-            else f"{item.record_kind}: {_short_id(item.record_id)}"
-        )
+        description = locator or _human_record_label(item, group.role)
         qualifiers = [] if item.strength.value == "unknown" else [item.strength.value]
         if item.required:
             qualifiers.append("required")
@@ -125,7 +121,7 @@ def _dossier_markdown(exchange: DossierExchange) -> str:
         f"# {request.profile.value.replace('_', ' ').title()} review",
         "",
         f"**{dossier.status.value.title()}** · `{dossier.repository_id}` · "
-        f"{len(dossier.items)} evidence items · {len(dossier.provider_run_ids)} provider run(s)",
+        f"{len(dossier.items)} evidence items · {len(dossier.provider_run_ids)} source(s)",
         "",
         request.question,
         "",
@@ -141,14 +137,14 @@ def _dossier_markdown(exchange: DossierExchange) -> str:
     for group in dossier.groups:
         lines.extend(
             [
-                f"### {group.role.value.replace('_', ' ').title()}",
+                f"### {_group_heading(group.role)}",
                 "",
                 group.proof_purpose,
                 "",
             ]
         )
         for item_id in group.item_ids:
-            lines.extend(_markdown_item(items[item_id]))
+            lines.extend(_markdown_item(items[item_id], group.role))
         lines.append("")
     lines.extend(["## Omissions and unknowns", ""])
     if dossier.boundary.unsatisfied_stop_conditions:
@@ -158,20 +154,18 @@ def _dossier_markdown(exchange: DossierExchange) -> str:
     if not dossier.omissions and not dossier.boundary.unsatisfied_stop_conditions:
         lines.append("- None declared within this dossier boundary.")
     lines.extend(["", "## Expansion actions", ""])
-    visible_actions = dossier.expansions[:8]
-    for action in visible_actions:
-        details = []
-        if action.target_id:
-            details.append(f"target `{_short_id(action.target_id)}`")
-        if action.role:
-            details.append(f"role `{action.role.value}`")
-        suffix = "; " + "; ".join(details) if details else ""
-        lines.append(f"- `{action.kind.value}`{suffix}")
-    if len(dossier.expansions) > len(visible_actions):
-        hidden_actions = len(dossier.expansions) - len(visible_actions)
-        lines.append(
-            f"- {hidden_actions} additional typed actions are available in JSON output."
-        )
+    action_counts: dict[str, int] = {}
+    for action in dossier.expansions:
+        details = f" for {action.role.value.replace('_', ' ')} evidence" if action.role else ""
+        label = f"{_expansion_label(action.kind.value)}{details}"
+        action_counts[label] = action_counts.get(label, 0) + 1
+    visible_actions = list(action_counts.items())[:8]
+    for label, count in visible_actions:
+        suffix = f" ({count} available)" if count > 1 else ""
+        lines.append(f"- {label}{suffix}.")
+    hidden_kinds = len(action_counts) - len(visible_actions)
+    if hidden_kinds > 0:
+        lines.append(f"- {hidden_kinds} additional action types are available in JSON output.")
     if not dossier.expansions:
         lines.append("- None.")
     lines.extend(["", "## Embedded content", ""])
@@ -206,17 +200,19 @@ def _dossier_markdown(exchange: DossierExchange) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _markdown_item(item: DossierItem) -> list[str]:
+def _markdown_item(item: DossierItem, role: EvidenceRole) -> list[str]:
     locations = ", ".join(f"`{value}`" for value in (_locator(item) for item in item.locators) if value) or "none"
-    label = _item_label(item.record_id, locations)
-    qualifiers = [item.record_kind]
+    label = _item_label(item, locations, role)
+    qualifiers = []
+    kind_label = _record_kind_qualifier(item.record_kind)
+    if kind_label is not None:
+        qualifiers.append(kind_label)
     if item.strength.value != "unknown":
         qualifiers.append(item.strength.value)
     if item.required:
         qualifiers.append("required")
-    lines = [
-        f"- {label} — {', '.join(qualifiers)}."
-    ]
+    qualifier_text = f" — {', '.join(qualifiers)}." if qualifiers else "."
+    lines = [f"- {label}{qualifier_text}"]
     lines.extend(f"  - {message}" for message in _useful_reasons(item))
     lines.extend(f"  - {summary}" for summary in _observation_summaries(item))
     if item.relationship_ids:
@@ -236,8 +232,13 @@ def _useful_reasons(item: DossierItem) -> list[str]:
             continue
         if reason.code.value in {"exact_target", "profile_required"} and len(item.selection_reasons) > 1:
             continue
-        if reason.message not in messages:
-            messages.append(reason.message)
+        message = reason.message
+        if message.startswith("Selected by ") and " at distance " in message:
+            relation = message.removeprefix("Selected by ").split(" at distance ", 1)[0]
+            predicate = relation.split(":", 1)[-1].replace("_", " ")
+            message = f"Related through {predicate}."
+        if message not in messages:
+            messages.append(message)
     return messages
 
 
@@ -268,8 +269,13 @@ def _markdown_omissions(omissions: list[DossierOmission]) -> list[str]:
             detail += f"; +{len(messages) - len(visible)} more"
         role_suffix = f", {role}" if role else ""
         total = sum(item.total_count for item in values)
+        reason_label = (
+            "Evidence Source Limitation"
+            if reason == "provider_limitation"
+            else reason.replace("_", " ").title()
+        )
         lines.append(
-            f"- **{reason.replace('_', ' ').title()}** "
+            f"- **{reason_label}** "
             f"({'required' if required else 'bounded'}{role_suffix}, {total}): {detail}"
         )
     return lines
@@ -288,11 +294,56 @@ def _semantic_label(record_id: str) -> str | None:
     return None
 
 
-def _item_label(record_id: str, locations: str) -> str:
-    semantic = _semantic_label(record_id)
+def _item_label(item: DossierItem, locations: str, role: EvidenceRole) -> str:
+    semantic = _semantic_label(item.record_id)
     if semantic is not None:
         return f"`{semantic}` — {locations}" if locations != "none" else f"`{semantic}`"
-    return locations if locations != "none" else f"`{_short_id(record_id)}`"
+    return locations if locations != "none" else _human_record_label(item, role)
+
+
+def _human_record_label(item: DossierItem, role: EvidenceRole | None = None) -> str:
+    if item.record_kind == "state":
+        return "Captured checkout"
+    if item.record_kind == "candidate":
+        return f"Possible duplicate `{_short_id(item.record_id)}`"
+    if role is EvidenceRole.TOPOLOGY:
+        return "Repository structure"
+    return f"`{_short_id(item.record_id)}`"
+
+
+def _record_kind_qualifier(record_kind: str) -> str | None:
+    return {
+        "candidate": "review candidate",
+        "contract": "declared requirement",
+        "diagnostic": "tool finding",
+        "observation": "observed result",
+    }.get(record_kind)
+
+
+def _group_heading(role: EvidenceRole) -> str:
+    return {
+        EvidenceRole.STATE: "Reviewed Checkout",
+        EvidenceRole.TOPOLOGY: "Structure",
+        EvidenceRole.PUBLIC_SURFACE: "User-Facing Code",
+        EvidenceRole.DUPLICATE_CANDIDATE: "Possible Duplicate",
+        EvidenceRole.CONSUMER: "Dependants",
+    }.get(role, role.value.replace("_", " ").title())
+
+
+def _expansion_label(kind: str) -> str:
+    return {
+        "omission": "Retrieve evidence omitted from this result",
+        "role": "Retrieve more evidence from this category",
+        "relationship": "Follow a related item",
+        "depth": "Follow relationships one step further",
+        "cursor": "Continue to the next page",
+        "provider": "Add results from a missing evidence source",
+        "complete_file": "Include the complete selected file",
+        "adjacent_context": "Include nearby source context",
+        "history": "Include relevant history",
+        "validation": "Include validation evidence",
+        "refresh": "Capture current evidence again",
+    }.get(kind, f"Retrieve more {kind.replace('_', ' ')} evidence")
 
 
 def _generic_markdown(value: BaseModel | dict[str, Any]) -> str:
@@ -306,8 +357,8 @@ def _generic_markdown(value: BaseModel | dict[str, Any]) -> str:
     return (
         f"# {artifact_type}\n\n"
         f"Stable reference: `{identity}`.\n\n"
-        "The canonical payload below preserves exact source states, evidence references, differences, "
-        "unknowns, and consumer-owned decisions.\n\n"
+        "The machine-readable details below preserve the exact checkout, evidence references, "
+        "differences, unknowns, and recorded decisions.\n\n"
         f"```json\n{rendered}\n```\n"
     )
 
@@ -322,7 +373,7 @@ def _generic_text(value: BaseModel | dict[str, Any], width: int) -> str:
                 f"API version: {payload.get('application_api_version', 'unknown')}",
                 "Operations: " + ", ".join(str(item) for item in payload.get("operations", [])),
                 "Profiles: " + ", ".join(str(item) for item in payload.get("profiles", [])),
-                "Optional providers: "
+                "Optional imported evidence: "
                 + str(interaction.get("optional_provider_invocation", "not declared")),
             ]
         ) + "\n"

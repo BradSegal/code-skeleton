@@ -78,6 +78,7 @@ def verify(root: Path) -> dict[str, Any]:
                 "pip",
                 "install",
                 "--disable-pip-version-check",
+                "--force-reinstall",
                 "--no-build-isolation",
                 "--no-deps",
                 str(wheels[0]),

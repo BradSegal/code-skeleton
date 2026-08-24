@@ -1,9 +1,8 @@
-"""Normalize captured specialist artifacts into the one provider ABI.
+"""Import saved results from other tools through one data-only contract.
 
-This module is deliberately an adapter gateway: it never discovers tools,
-executes repository code, follows external links, or treats producer output as
-trusted source fact.  Callers supply bytes captured elsewhere and a baseline
-bound to the repository state being reviewed.
+This module never discovers or runs tools, executes repository code, follows
+external links, or treats a tool's output as trusted source fact. Callers
+supply saved result bytes and the exact repository state they describe.
 """
 
 from __future__ import annotations

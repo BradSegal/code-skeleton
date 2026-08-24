@@ -4,12 +4,32 @@ Anatomize outputs are designed to be read in a fixed order. Start with whether
 the question was answered, then inspect the selected evidence and anything that
 could change the decision.
 
+## A plain-language model
+
+You do not need to learn Anatomize's internal data model to use it. Seven terms
+appear in commands and output:
+
+| Term | Meaning |
+| --- | --- |
+| **Session** | A saved map of one exact checkout. Create it once with `review start`. |
+| **Dossier** | A short, task-focused selection from that map. It tells you what to inspect for one question. |
+| **Evidence source** | Anatomize itself or a tool whose saved results were imported. JSON calls this a `provider`. |
+| **Evidence group** | Items that serve the same purpose, such as definitions, callers, tests, or documentation. JSON calls this purpose a `proof_role`. |
+| **Decision record** | Your merge, keep, or postpone decision with its owner and rationale. The command name is `overlay-create`. |
+| **Implementation intent** | The requirements you record before editing. |
+| **Closure report** | The after-change check showing which recorded requirements have current supporting evidence. |
+
+An **artifact** is simply a saved input or output file, usually JSON, Markdown,
+or a tool's native report. A **source state** identifies the exact checkout the
+file describes. These names matter because a passing test report from yesterday
+must not be used as evidence for code changed today.
+
 ## Start with the status
 
 Every dossier reports one of three states:
 
-- `complete`: all required proof roles were available within the requested
-  boundary;
+- `complete`: all required evidence categories were available within the
+  requested scope;
 - `partial`: the result is useful, but a budget, scope, or provider left a
   material omission; or
 - `blocked`: the current session cannot support a defensible answer.
@@ -42,7 +62,7 @@ diagnostic rather than increasing every budget.
 
 ## Read the evidence groups
 
-Proof-role groups explain why an item was selected. Definitions and contracts
+Evidence groups explain why an item was selected. Definitions and contracts
 describe the target; consumers and relationships show what may be affected;
 tests, documentation, diagnostics, and runtime observations show where the
 change can be checked.
@@ -93,9 +113,10 @@ evidence and no declared unknown remains. Otherwise the report identifies an
 
 ## Choose the right output
 
-Use canonical JSON between tools and releases. Use Markdown for code review,
-design records, and other human hand-offs. Use plain text for terminals and
-logs, but do not parse it as an interchange format.
+Use canonical JSON—the stable, versioned JSON form—between tools and releases.
+Use Markdown for code review, design records, and other human hand-offs. Use
+plain text for terminals and logs, but do not parse it as an interchange
+format.
 
 You are ready to act when you can state the exact question, the evidence that
 supports the decision, the evidence that is absent or conflicting, and the

@@ -44,7 +44,7 @@ structure; they do not make embedded content safe to execute or obey.
 Anatomize is not a secret scanner, malware detector, vulnerability scanner,
 dependency resolver, package-signature verifier, authorization service,
 multi-user server, test runner, scientific-validity assessor, or release
-approval. Use the appropriate specialist tool and import its bounded result
+approval. Use the appropriate test, analysis, or security tool and import its saved result
 when it contributes to review.
 
 Before publishing an Anatomize artifact, inspect explicitly included source and

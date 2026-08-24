@@ -168,7 +168,7 @@ class ContractKind(str, Enum):
 
 
 class ConflictStatus(str, Enum):
-    """Whether contradictory observations have external adjudication."""
+    """Whether an imported tool result marks contradictory observations as resolved."""
 
     UNRESOLVED = "unresolved"
     EXTERNALLY_RESOLVED = "externally_resolved"

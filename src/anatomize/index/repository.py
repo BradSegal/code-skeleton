@@ -159,13 +159,13 @@ def _assemble_repository_index(
         duplicate_groups=duplicate_groups,
         limitations=[
             "Import edges are static Python imports; dynamic imports and runtime call paths are not inferred.",
-            "R and other languages remain visible as related files but do not receive semantic symbol edges "
-            "from the baseline provider.",
+            "R and other languages remain visible as related files, but the built-in repository map "
+            "does not infer their symbol relationships.",
             "Text references locate supporting context and do not prove behavioral dependence.",
-            f"The baseline lexical provider omitted {unresolved_candidates} unresolved or ambiguous candidates.",
+            f"The built-in repository map omitted {unresolved_candidates} unresolved or ambiguous references.",
             *(
                 [
-                    f"The Python provider could not parse {len(parse_failures)} file(s): "
+                    f"The built-in Python reader could not parse {len(parse_failures)} file(s): "
                     + "; ".join(parse_failures[:8])
                 ]
                 if parse_failures

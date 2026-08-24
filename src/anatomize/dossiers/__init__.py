@@ -1,4 +1,4 @@
-"""Task-profile dossiers over the canonical source-bound evidence kernel."""
+"""Task-focused selections from evidence captured for one repository checkout."""
 
 from anatomize.dossiers.context import DossierContext, DossierContextError, session_manifest_digest
 from anatomize.dossiers.engine import DossierEngine, DossierQueryError, build_dossier

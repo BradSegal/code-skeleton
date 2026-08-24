@@ -67,9 +67,9 @@ nav:
       - Lifecycle workflows: WORKFLOWS.md
   - Use Anatomize:
       - Interpret results: CONCEPTS.md
-      - Choose an artifact: ARTIFACTS.md
+      - Choose an output: ARTIFACTS.md
       - Agent and automation integration: AUTOMATION.md
-      - Provider artifacts: PROVIDERS.md
+      - Import tool results: PROVIDERS.md
       - Troubleshooting: TROUBLESHOOTING.md
   - Reference:
       - Public reference: REFERENCE.md

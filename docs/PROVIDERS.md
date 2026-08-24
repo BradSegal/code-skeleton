@@ -1,15 +1,24 @@
-# Provider artifacts and specialist integration
+# Import results from other tools
 
-A specialist result is useful to a review only when the consumer can identify
-what produced it, which repository state it describes, what it covered, and
-what it cannot establish. Anatomize therefore integrates tools through
-captured data rather than executing installed plugins. Acquisition remains
-under the caller's authority, and the resulting session can be reproduced in a
-different process or release.
+Anatomize maps source files, relationships, tests, documentation, and project
+configuration by itself. It does not run your linter, test runner, coverage
+tool, security scanner, dependency scanner, or research workflow. If you have
+already run one of those tools, you can add its saved result to the review.
 
-## Which import route should I use?
+This lets a dossier connect a finding or test result to the relevant code while
+keeping important limits visible. For example, an imported JUnit file describes
+only the tests selected in that run, and an old coverage file must not be used
+as evidence for a newer checkout.
 
-The normal route imports a supported native artifact:
+Anatomize calls each source of imported evidence a **provider**. Most users do
+not need to construct one: use `--artifact` with a supported result file. The
+`ProviderEnvelope` described later on this page is for authors building a new
+integration.
+
+## Import a supported result file
+
+Pass each file as `KIND=PATH`. Add `@VERSION` only when the format requires an
+explicit version:
 
 ```bash
 anatomize review start . \
@@ -21,7 +30,14 @@ anatomize review start . \
   --format json --output session.json
 ```
 
-The advanced route imports an already-normalised envelope:
+Anatomize checks that each result belongs to the same repository state before
+combining its evidence with the repository map.
+
+## Use the advanced integration format
+
+If you are writing an adapter for a result format that Anatomize does not
+support directly, normalise it to a `ProviderEnvelope` and pass that file with
+`--provider`:
 
 ```bash
 anatomize review start . \
@@ -29,10 +45,12 @@ anatomize review start . \
   --format json --output session.json
 ```
 
-Both routes are explicit. Every artifact is bound to the baseline repository
-and state before its evidence is merged.
+This route is intended for integration authors. It carries the tool name and
+version, exact checkout, configuration, scope, completeness, limitations, and
+normalised evidence in one validated file. Anatomize still does not execute the
+external tool.
 
-## Which artifact formats are maintained?
+## Supported result formats
 
 | Kind | Input | Evidence contributed |
 | --- | --- | --- |
@@ -57,9 +75,10 @@ A passing JUnit suite does not prove unselected tests passed. Coverage does not
 prove correctness. SARIF severity remains the producer's severity. A suggested
 fix remains untrusted input.
 
-## What must every provider envelope establish?
+## What the advanced provider format records
 
-The public `anatomize.providers` namespace supplies `ProviderEnvelope`,
+The rest of this page is API-level guidance for integration authors. The public
+`anatomize.providers` namespace supplies `ProviderEnvelope`,
 `ProviderBatchBuilder`, `ProviderScope`, `ProviderToolIdentity`,
 `build_provider_envelope`, parsing/writing helpers, evidence normalisation, and
 `run_provider_conformance`.
@@ -83,7 +102,7 @@ state is not approximately current evidence. Validation rejects the state
 mismatch so that a later closure report cannot silently use pre-change coverage
 as proof of the changed implementation.
 
-## How should a provider be authored?
+## Build a new integration
 
 A provider producer should:
 
@@ -107,7 +126,7 @@ contract are retained. When one explicitly conflicts and another supports or
 qualifies the target, evidence composition creates an unresolved
 `ConflictRecord`; it does not pick a winner.
 
-## When does a new adapter belong?
+## Decide whether a new adapter belongs
 
 Add a native adapter only when it contributes evidence that changes a named
 design, audit, localisation, consolidation, or closure decision. Reuse SARIF,
@@ -122,6 +141,6 @@ limitations. Anatomize intentionally has no provider execution broker or
 plugin discovery layer.
 
 Choose a native adapter when a maintained interchange already carries the
-needed evidence. Choose `ProviderEnvelope` when a specialist result needs a new
-normalisation layer. Add another native format only when neither route can
-represent evidence that materially changes a supported review decision.
+needed evidence. Choose `ProviderEnvelope` when an external tool's result needs
+a new normalisation layer. Add another native format only when neither route
+can represent evidence that materially changes a supported review decision.

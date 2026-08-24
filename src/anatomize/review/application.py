@@ -235,8 +235,8 @@ class ReviewApplication:
         omissions = [
             build_omission(
                 OmissionScope.REPORT,
-                "report_on_demand",
-                "Review reports are deterministic projections exported on demand.",
+                "report_created_on_request",
+                "No dossier is stored inside the session; create one with review dossier.",
             )
         ]
         if not selected_sources:
@@ -536,7 +536,7 @@ class ReviewApplication:
         preserved_divergence: Iterable[str] = (),
         review_conditions: Iterable[str] = (),
     ) -> DecisionOverlay:
-        """Create a consumer-owned decision over exact current evidence."""
+        """Record a reviewer-owned decision over exact current evidence."""
         _require_candidate_state(bundle, candidate)
         return build_decision_overlay(
             candidate=candidate,

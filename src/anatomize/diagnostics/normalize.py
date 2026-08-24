@@ -132,7 +132,7 @@ def unavailable_diagnostic_envelope(
     baseline: RepositoryEvidence,
     reason: str,
 ) -> ProviderEnvelope:
-    """Return explicit unavailable coverage without loading a specialist executable."""
+    """Record unavailable diagnostics without loading an external executable."""
     log = SarifLog(
         version="2.1.0",
         runs=[
@@ -254,7 +254,7 @@ def _normalize_run(
                 summary=summary,
                 scope_type="invocation",
                 scope_id=f"invocation:{index}",
-                remediation="Inspect the specialist tool invocation and rerun it independently.",
+                remediation="Inspect how the analysis tool was run, then rerun it separately.",
             )
     if run.results is None:
         _degrade(
@@ -370,7 +370,7 @@ def _normalize_result(
             summary=f"SARIF rule {rule_id} has no reporting descriptor in the tool driver.",
             scope_type="rule",
             scope_id=rule_id,
-            remediation="Export rule metadata when the specialist tool supports it.",
+            remediation="Export rule metadata when the analysis tool supports it.",
         )
     message = _render_message(result.message, rule)
     location_attempts = [
@@ -619,7 +619,7 @@ def _resolve_location(
             summary=f"SARIF artifact hash for {path} does not match the selected source.",
             scope_type="path",
             scope_id=path,
-            remediation="Rerun the specialist tool against the selected source state.",
+            remediation="Rerun the analysis tool against the selected checkout.",
         )
         return _ResolvedLocation(opaque, (external.entity_id,), None)
 
@@ -983,13 +983,13 @@ def _binding_failure(
         return (
             "stale_diagnostic_artifact",
             "The SARIF artifact is bound to a different repository source state.",
-            "Rerun the specialist tool against the selected source state.",
+            "Rerun the analysis tool against the selected checkout.",
         )
     if binding.configuration_digest != expected_configuration_digest:
         return (
             "diagnostic_configuration_mismatch",
             "The SARIF artifact was acquired under a different configuration.",
-            "Rerun the specialist tool with the selected configuration.",
+            "Rerun the analysis tool with the selected configuration.",
         )
     revisions = {
         item.revision_id
@@ -1000,7 +1000,7 @@ def _binding_failure(
         return (
             "stale_diagnostic_revision",
             "SARIF version-control provenance does not include the selected revision.",
-            "Rerun the specialist tool at the selected revision.",
+            "Rerun the analysis tool at the selected revision.",
         )
     return None
 

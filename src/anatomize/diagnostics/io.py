@@ -39,7 +39,7 @@ def parse_sarif_log(
     *,
     limits: SarifArtifactLimits = SarifArtifactLimits(),
 ) -> SarifLog:
-    """Parse standard SARIF 2.1.0 without loading or executing a specialist tool."""
+    """Parse a saved SARIF 2.1.0 report without loading or running its producer."""
     try:
         payload = parse_bounded_json_object(
             raw,
@@ -57,7 +57,7 @@ def parse_sarif_log(
         raise SarifArtifactError(
             "sarif_version_incompatible",
             f"Expected SARIF {SARIF_VERSION!r}; found {version!r}",
-            remediation="Export SARIF 2.1.0 from the specialist tool or converter.",
+            remediation="Export SARIF 2.1.0 from the analysis tool or converter.",
         )
     try:
         return SarifLog.model_validate(payload)

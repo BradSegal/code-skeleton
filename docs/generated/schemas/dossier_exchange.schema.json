@@ -664,7 +664,7 @@
     },
     "DossierGroup": {
       "additionalProperties": false,
-      "description": "Stable proof-role grouping in reader order.",
+      "description": "Evidence items grouped by their purpose in reader order.",
       "properties": {
         "group_id": {
           "minLength": 1,

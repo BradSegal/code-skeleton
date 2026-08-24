@@ -71,7 +71,7 @@ class ProviderBatchBuilder:
             self.include_baseline_entity(entities[location.file_id])
 
     def repository_entity(self, state: SourceStateRecord) -> RepositoryEntity:
-        """Reuse or create the one canonical repository entity for a state."""
+        """Reuse or create the repository record for one captured checkout."""
         match = next(
             (
                 item

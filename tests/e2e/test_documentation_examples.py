@@ -125,6 +125,8 @@ def test_reader_path_links_resolve_and_exclude_internal_narration() -> None:
         content = page.read_text(encoding="utf-8")
         assert "tickets/" not in content
         assert "T-035" not in content
+        assert "specialist" not in content.casefold()
+        assert "proof-role" not in content.casefold()
         for target in link_pattern.findall(content):
             if "://" in target or target.startswith("#"):
                 continue

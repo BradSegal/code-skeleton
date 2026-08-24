@@ -36,9 +36,9 @@ anatomize review dossier .anatomy/review/before.json \
   --output .anatomy/review/orientation.md
 ```
 
-Read the status and proof-role groups first. They identify public surfaces,
-ownership, topology, tests, documentation, workflows, configuration, data, and
-available specialist evidence without dumping the repository.
+Read the status and evidence groups first. They identify public entry points,
+ownership, dependencies, tests, documentation, workflows, configuration, data,
+and any imported tool results without dumping the repository.
 
 ## 3. Localise the decision
 
@@ -90,7 +90,8 @@ anatomize review similarity .anatomy/review/before.json \
   --output .anatomy/review/similarity.json
 ```
 
-If a candidate exists, build its complete adjudication surface:
+If a candidate exists, collect the evidence needed to decide whether it should
+be merged:
 
 ```bash
 anatomize review consolidate \
@@ -103,7 +104,7 @@ anatomize review consolidate \
 
 Inspect the consolidation dossier before choosing a disposition. A helper that
 looks redundant may preserve different input handling or serve a distinct
-caller. Record the consumer-owned decision separately:
+caller. Record your decision separately from the observed similarity:
 
 ```bash
 anatomize review overlay-create \
@@ -154,8 +155,8 @@ anatomize review intent \
 ```
 
 Now edit. Run the repository's native tests, linters, documentation checks,
-security tools, and research validations. Anatomize imports their artifacts; it
-does not execute or impersonate them.
+security tools, and research validations. Anatomize can import their saved
+results; it does not execute or impersonate them.
 
 ## 6. Capture and compare the after-state
 

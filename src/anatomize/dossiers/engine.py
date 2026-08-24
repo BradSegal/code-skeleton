@@ -88,7 +88,7 @@ from anatomize.evidence import (
     WorkflowEntity,
 )
 
-_AUTHORITY = "Anatomize supplies source-bound evidence and does not choose, apply, or approve a change."
+_AUTHORITY = "Anatomize reports evidence from this checkout; the reviewer decides and approves any change."
 
 _SECTION_ORDER = {
     DossierSection.DECISION_CRITICAL: 0,
@@ -253,22 +253,22 @@ _PROFILE_ROLE_CAPS: dict[DossierProfile, dict[EvidenceRole, int]] = {
 }
 
 _PROOF_PURPOSE = {
-    EvidenceRole.STATE: "Bind the exact source state represented by this dossier.",
-    EvidenceRole.TOPOLOGY: "Establish repository or subsystem structure.",
-    EvidenceRole.OWNERSHIP: "Locate a declared or conservative ownership boundary.",
-    EvidenceRole.PUBLIC_SURFACE: "Identify a public consumer-facing surface.",
+    EvidenceRole.STATE: "Identify the exact checkout reviewed here.",
+    EvidenceRole.TOPOLOGY: "Show the repository or subsystem structure.",
+    EvidenceRole.OWNERSHIP: "Show where responsibility for this code appears to live.",
+    EvidenceRole.PUBLIC_SURFACE: "Identify code or documentation intended for users.",
     EvidenceRole.ENTRY_POINT: "Identify an execution or workflow entry point.",
     EvidenceRole.FLOW: "Trace a typed code, data, workflow, or artifact flow.",
-    EvidenceRole.DEFINITION: "Establish the exact implementation definition.",
+    EvidenceRole.DEFINITION: "Locate the implementation being reviewed.",
     EvidenceRole.DECLARATION: "Establish the exact declaration surface.",
     EvidenceRole.DEPENDENCY: "Show an outbound dependency required by the target.",
     EvidenceRole.CALLER: "Show a typed inbound caller.",
     EvidenceRole.CALLEE: "Show a typed outbound callee.",
     EvidenceRole.REFERENCE: "Show an exact or qualified reference.",
-    EvidenceRole.CONSUMER: "Show an inbound consumer or dependant.",
+    EvidenceRole.CONSUMER: "Show code or documentation that depends on the target.",
     EvidenceRole.CONTRACT: "Preserve a declared contract separately from observations.",
     EvidenceRole.ALTERNATIVE: "Expose a conservative alternative or comparison candidate.",
-    EvidenceRole.DECISION_CONTEXT: "Reference consumer-owned intent or prior decisions.",
+    EvidenceRole.DECISION_CONTEXT: "Reference recorded requirements or prior review decisions.",
     EvidenceRole.DIAGNOSTIC: "Expose a tool-native diagnostic without turning it into a decision.",
     EvidenceRole.CONFLICT: "Keep contradictory observations visible.",
     EvidenceRole.UNKNOWN: "Keep unresolved, ambiguous, or unavailable evidence visible.",
@@ -281,7 +281,7 @@ _PROOF_PURPOSE = {
     EvidenceRole.ARTIFACT: "Locate generated or released artifact evidence.",
     EvidenceRole.CHANGE: "Show an exact cross-state change or lineage record.",
     EvidenceRole.VALIDATION: "Show validation evidence bound to the selected state.",
-    EvidenceRole.DUPLICATE_CANDIDATE: "Expose a similarity candidate without a deletion verdict.",
+    EvidenceRole.DUPLICATE_CANDIDATE: "Show a possible duplicate that still needs review.",
     EvidenceRole.PROVENANCE: "Show provider and artifact provenance.",
     EvidenceRole.SUPPORTING_CONTEXT: "Provide lower-priority context that qualifies the core evidence.",
 }
@@ -1238,7 +1238,7 @@ class DossierEngine:
                     SelectionReasonCode.CONSERVATIVE_CANDIDATE,
                     candidate.candidate_id,
                     object_id=matched[0],
-                    message="Candidate membership is retained without converting it into a fact or verdict.",
+                    message="These items look similar; Anatomize has not decided that they serve the same purpose.",
                 ),
             )
             for member_id in candidate.member_entity_ids:
@@ -1255,7 +1255,7 @@ class DossierEngine:
                         SelectionReasonCode.CONSERVATIVE_CANDIDATE,
                         member_id,
                         object_id=candidate.candidate_id,
-                        message="Related only through a conservative candidate group.",
+                        message="Included because it belongs to the same possible-duplicate group.",
                     ),
                 )
         related_observations = {
@@ -1312,7 +1312,7 @@ class DossierEngine:
                     SelectionReasonCode.CONFLICT_SURFACE,
                     conflict.conflict_id,
                     object_id=conflict.target_id,
-                    message="Conflicting observations are retained without adjudication.",
+                    message="Conflicting reports are retained and remain unresolved.",
                 ),
             )
             selection.conflict_ids.add(conflict.conflict_id)
@@ -2016,7 +2016,7 @@ class DossierEngine:
                     selector=_repository_selector(self.context.repository_id),
                     status=TargetResolutionStatus.EXACT,
                     resolved_ids=[record.entity_id],
-                    message="Repository orientation selected the canonical repository entity.",
+                    message="The review covers this repository checkout.",
                 )
                 for record in self._entities.values()
                 if isinstance(record, RepositoryEntity) and record.source_state_id == current_state
@@ -2206,7 +2206,7 @@ class DossierEngine:
         record: _Record,
         relationship_role: EvidenceRole,
     ) -> EvidenceRole:
-        """Keep a neighbour's proof role when a generic edge would erase it."""
+        """Keep a neighbour's evidence purpose when a generic edge would erase it."""
         semantic_role = self._role_for_record(record)
         if semantic_role in {
             EvidenceRole.TEST,
@@ -2380,7 +2380,9 @@ class DossierEngine:
 
     def _limitation_messages(self) -> list[str]:
         messages = {item.summary for item in self._limitations.values()}
-        messages.update(item.rationale for item in self.context.session_omissions)
+        messages.update(
+            item.rationale for item in self.context.session_omissions if item.scope.value != "report"
+        )
         return sorted(messages)
 
     def _kernel_omissions(
@@ -2408,6 +2410,8 @@ class DossierEngine:
                 )
             )
         for session_omission in self.context.session_omissions:
+            if session_omission.scope.value == "report":
+                continue
             action = (
                 _ActionSpec(ExpansionKind.PROVIDER, target_id=session_omission.provider_id)
                 if session_omission.provider_id is not None
@@ -2563,6 +2567,8 @@ def _omission_reason(reason: str) -> OmissionReason:
 def _session_omission_reason(scope: str, code: str) -> OmissionReason:
     if scope == "budget":
         return OmissionReason.BUDGET
+    if scope == "slice":
+        return OmissionReason.POLICY
     if scope == "source" and any(marker in code.casefold() for marker in ("stale", "drift")):
         return OmissionReason.SOURCE_DRIFT
     return _omission_reason(code)

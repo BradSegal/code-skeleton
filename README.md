@@ -98,10 +98,11 @@ anatomize review change \
 Closure requires a fresh observation for every declared obligation. Anatomize
 accounts for the evidence but never fabricates a test, audit, or human approval.
 
-## Bring specialist evidence
+## Import results from tools you already use
 
-`review start` always builds the deterministic baseline itself. It can also
-import data artifacts that another tool has already produced:
+`review start` always maps the repository itself. It can also include saved
+results from tools you ran separately—for example, linter findings, test
+results, coverage, or a dependency inventory:
 
 ```bash
 anatomize review start . \
@@ -114,12 +115,12 @@ anatomize review start . \
   --output .anatomy/review/session.json
 ```
 
-Supported import kinds are `sarif`, `lsp`, `junit`, `coverage`, `mutation`,
+Supported file kinds are `sarif`, `lsp`, `junit`, `coverage`, `mutation`,
 `jscpd`, `snakemake`, `targets`, `renv`, `cyclonedx`, and `ro-crate`. Use
 `KIND@VERSION=PATH` when a native format needs an explicit version. A caller can
-also pass an already-normalised `ProviderEnvelope` with `--provider`. Anatomize
-does not discover plugins, execute providers, run repository code, or use the
-network during review.
+also pass a `ProviderEnvelope`: Anatomize's advanced, normalised format for
+results from another tool. Anatomize does not run any of these tools, run
+repository code, discover plugins, or use the network during review.
 
 ## Integrate an agent
 
@@ -148,26 +149,27 @@ as the CLI. It adds no second analysis path.
 - Artifacts bind repository identity, exact source state, producer evidence,
   configuration, and limitations.
 - Independent evidence is merged without last-writer-wins; explicit
-  cross-provider contradictions become conflict records.
+  contradictions between evidence sources become conflict records.
 - Sessions omit source text by default. `--include-source` is exact and
   opt-in.
 - Outputs are deterministic and human-readable; Markdown and plain text do not
   require ANSI or colour.
 - The library does not execute code, prove semantic equivalence, approve a
-  release, scan for secrets, or replace specialist compilers and test tools.
+  release, scan for secrets, or replace compilers, test runners, linters, or
+  security scanners.
 
 ## Documentation
 
 - [Documentation site](https://bradsegal.github.io/anatomize/): task-led paths
-  for reviewers, agent integrators, and provider authors.
+  for reviewers, agent integrators, and authors of external-tool integrations.
 - [Quickstart](https://bradsegal.github.io/anatomize/QUICKSTART/): the complete
   design-to-closure workflow.
 - [Lifecycle workflows](https://bradsegal.github.io/anatomize/WORKFLOWS/):
   design, audit, consolidation, implementation, and human hand-off.
 - [Interpret review results](https://bradsegal.github.io/anatomize/CONCEPTS/): status, evidence groups,
   omissions, conflicts, consolidation decisions, and closure.
-- [Provider artifacts](https://bradsegal.github.io/anatomize/PROVIDERS/): importing and authoring bounded
-  evidence.
+- [Import tool results](https://bradsegal.github.io/anatomize/PROVIDERS/): add
+  linter, test, coverage, dependency, and research-workflow output.
 - [Public reference](https://bradsegal.github.io/anatomize/REFERENCE/): CLI, Python namespaces, schemas, and
   supported formats.
 - [Troubleshooting](https://bradsegal.github.io/anatomize/TROUBLESHOOTING/): recovery and visible failure

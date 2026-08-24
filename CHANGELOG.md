@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.0.1 - 2026-08-24
+
+### Changed
+
+- Explain the review model in reader language before introducing machine terms,
+  and describe imported evidence as saved results from familiar tools.
+- Make rendered dossiers and CLI help use task language while retaining stable
+  JSON field names for automation.
+
+### Fixed
+
+- Make session-store lock typing portable across Windows and POSIX type
+  environments.
+- Force the documentation verifier to install the built wheel when its isolated
+  environment can see an editable checkout.
+- Use an available `setup-uv` action and deploy the documentation site through
+  an enabled GitHub Pages environment.
+
 ## 2.0.0 - 2026-08-24
 
 ### Changed

@@ -309,7 +309,10 @@ def _try_lock(descriptor: int) -> bool:
         else:
             import fcntl
 
-            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            flock = getattr(fcntl, "flock")
+            lock_ex = getattr(fcntl, "LOCK_EX")
+            lock_nb = getattr(fcntl, "LOCK_NB")
+            flock(descriptor, lock_ex | lock_nb)
     except (BlockingIOError, OSError):
         return False
     return True
@@ -324,7 +327,9 @@ def _unlock(descriptor: int) -> None:
     else:
         import fcntl
 
-        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        flock = getattr(fcntl, "flock")
+        lock_un = getattr(fcntl, "LOCK_UN")
+        flock(descriptor, lock_un)
 
 
 def _write_bytes(path: Path, raw: bytes) -> None:

@@ -27,8 +27,8 @@ source, budgets, and output paths are explicit arguments.
 | `review expand SESSION EXCHANGE ACTION` | Apply one source-bound advertised expansion without mutating the base exchange. |
 | `review similarity SESSION` | Project conservative implementation, test, and documentation candidates. |
 | `review change BEFORE AFTER` | Compare two exact states of one repository. |
-| `review consolidate EXCHANGE SIMILARITY CANDIDATE` | Gather the full adjudication surface for one candidate. |
-| `review overlay-create SESSION SIMILARITY CANDIDATE` | Record a portable consumer-owned disposition and rationale. |
+| `review consolidate EXCHANGE SIMILARITY CANDIDATE` | Gather the evidence needed to decide whether one candidate should be merged. |
+| `review overlay-create SESSION SIMILARITY CANDIDATE` | Record a portable decision, owner, and rationale without changing the evidence. |
 | `review overlay-check OVERLAY SESSION SIMILARITY CANDIDATE` | Evaluate decision currency against relevant current evidence. |
 | `review intent SESSION EXCHANGE OBLIGATIONS` | Bind explicit implementation obligations to the before-state. |
 | `review verify INTENT AFTER OBSERVATIONS` | Account for every obligation against fresh after-state evidence. |
@@ -100,7 +100,7 @@ Lower-level public ownership is:
 | `anatomize.index` | Deterministic baseline `RepositoryIndex` and `build_repository_index`. |
 | `anatomize.evidence` | Canonical entities, edges, contracts, observations, candidates, conflicts, completeness, omissions, aliases, lineage, merge, parse, and write. |
 | `anatomize.identity` | Portable identity keys, coordinate conversion, and cross-provider claim reconciliation. |
-| `anatomize.providers` | Data-only provider ABI, envelope construction, normalisation, conformance, and baseline projection. |
+| `anatomize.providers` | Advanced contract for normalising saved results from another analysis tool. |
 | `anatomize.sessions` | Portable session manifests/bundles and recoverable immutable stores. |
 | `anatomize.dossiers` | Targets, profiles, roles, requests, budgets, deterministic selection, slicing, cursors, and expansion. |
 | `anatomize.temporal` | Exact state manifests, evidence-wide comparisons, deltas, validation, and exact lineage. |
