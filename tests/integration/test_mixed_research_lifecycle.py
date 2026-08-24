@@ -104,7 +104,7 @@ def test_mixed_research_project_supports_bounded_journeys_and_exact_change_closu
         path="analysis.ipynb",
     )
     qmd_before = parse_executable_document(
-        (project / "analysis.qmd").read_text(),
+        (project / "analysis.qmd").read_text(encoding="utf-8"),
         repository_id=REPOSITORY_ID,
         source_state_id=before_state,
         path="analysis.qmd",
@@ -258,13 +258,13 @@ def test_mixed_research_project_supports_bounded_journeys_and_exact_change_closu
         provider_version="9.17",
     )
     qmd_after = parse_executable_document(
-        (project / "analysis.qmd").read_text(),
+        (project / "analysis.qmd").read_text(encoding="utf-8"),
         repository_id=REPOSITORY_ID,
         source_state_id=after_state,
         path="analysis.qmd",
     )
     after_test = extract_python_test_intent(
-        (project / "tests/normalise_checks.py").read_text(),
+        (project / "tests/normalise_checks.py").read_text(encoding="utf-8"),
         repository_id=REPOSITORY_ID,
         source_state_id=after_state,
         path="tests/normalise_checks.py",
@@ -497,7 +497,7 @@ def _r_sources(project: Path) -> dict[str, str]:
         "tests/testthat/test-estimate.R",
         "analysis.qmd",
     ]
-    return {path: (project / path).read_text() for path in paths}
+    return {path: (project / path).read_text(encoding="utf-8") for path in paths}
 
 
 def _digest(raw: bytes) -> str:
@@ -535,7 +535,7 @@ def _apply_controlled_change(project: Path) -> None:
     )
     qmd = (
         (project / "analysis.qmd")
-        .read_text()
+        .read_text(encoding="utf-8")
         .replace(
             "The report consumes the generated cohort and effect estimate.",
             "The report consumes the regenerated cohort and effect estimate under the v2 environment.",
@@ -543,7 +543,7 @@ def _apply_controlled_change(project: Path) -> None:
     )
     (project / "analysis.qmd").write_text(qmd)
     workflow_path = project / "workflow/snakemake-summary.json"
-    workflow = json.loads(workflow_path.read_text())
+    workflow = json.loads(workflow_path.read_text(encoding="utf-8"))
     workflow["rules"][1]["environment"]["digest"] = _digest(b"renv-v2")
     workflow["rules"][1]["output"][0]["digest"] = _digest(b"effect-v2")
     workflow_path.write_text(json.dumps(workflow, indent=2) + "\n")

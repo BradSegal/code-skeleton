@@ -15,6 +15,8 @@ All notable changes to this project are documented in this file.
 
 - Make session-store lock typing portable across Windows and POSIX type
   environments.
+- Interpret imported POSIX and Windows absolute paths consistently on every
+  operating system, and read Unicode test fixtures explicitly as UTF-8.
 - Force the documentation verifier to install the built wheel when its isolated
   environment can see an editable checkout.
 - Use an available `setup-uv` action and deploy the documentation site through

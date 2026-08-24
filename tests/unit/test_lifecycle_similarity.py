@@ -159,16 +159,17 @@ def test_jscpd_json_normalizes_through_bounded_external_evidence() -> None:
     assert candidate.limitations
     assert parse_similarity_artifact(canonical_similarity_bytes(artifact)) == artifact
 
-    with pytest.raises(SimilarityArtifactError, match="absolute path"):
-        parse_jscpd_report(
-            raw.replace(b"src/a.py", b"/outside/a.py"),
-            repository_id="repository:fixture",
-            source_state_id="state:after",
-            provider_run_id="provider:jscpd",
-            provider_version="5.0",
-            configuration_digest=_digest("configuration"),
-            query=query,
-        )
+    for absolute_path in ("/outside/a.py", "C:/outside/a.py"):
+        with pytest.raises(SimilarityArtifactError, match="absolute path"):
+            parse_jscpd_report(
+                raw.replace(b'"src/a.py"', json.dumps(absolute_path).encode()),
+                repository_id="repository:fixture",
+                source_state_id="state:after",
+                provider_run_id="provider:jscpd",
+                provider_version="5.0",
+                configuration_digest=_digest("configuration"),
+                query=query,
+            )
 
 
 def test_baseline_exact_and_normalized_methods_need_no_external_provider() -> None:

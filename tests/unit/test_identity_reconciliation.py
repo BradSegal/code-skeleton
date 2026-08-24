@@ -48,7 +48,9 @@ FIXTURE_ROOT = Path(__file__).parents[1] / "fixtures" / "identity"
 
 
 def test_coordinate_known_truth_round_trips_all_supported_conventions() -> None:
-    fixture: dict[str, Any] = json.loads((FIXTURE_ROOT / "coordinate-corpus.json").read_text())
+    fixture: dict[str, Any] = json.loads(
+        (FIXTURE_ROOT / "coordinate-corpus.json").read_text(encoding="utf-8")
+    )
     mapper = SourceCoordinateMap(fixture["source"])
 
     for case in fixture["cases"]:
@@ -211,7 +213,9 @@ def test_notebook_embedded_and_generated_coordinate_spaces_validate_as_one_graph
 
 
 def test_identity_corpus_is_collision_resistant_case_sensitive_and_portable() -> None:
-    fixture: dict[str, Any] = json.loads((FIXTURE_ROOT / "identity-corpus.json").read_text())
+    fixture: dict[str, Any] = json.loads(
+        (FIXTURE_ROOT / "identity-corpus.json").read_text(encoding="utf-8")
+    )
     identities = {
         case["case_id"]: canonical_identity_id(parse_identity_key(case["key"]))
         for case in fixture["cases"]

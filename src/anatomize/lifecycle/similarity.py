@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, Literal
 
 from pydantic import Field, ValidationError, model_validator
@@ -661,12 +661,19 @@ def _jscpd_region(value: Any, source_state_id: str, root: Path | None) -> Candid
             remediation="Regenerate the jscpd JSON report.",
         )
     path = Path(name)
-    if path.is_absolute():
+    is_absolute = PurePosixPath(name).is_absolute() or PureWindowsPath(name).is_absolute()
+    if is_absolute:
         if root is None:
             raise SimilarityArtifactError(
                 "jscpd_absolute_path",
                 "jscpd report contains an absolute path without an explicit repository root",
                 remediation="Pass the trusted repository root used for the external run.",
+            )
+        if not path.is_absolute():
+            raise SimilarityArtifactError(
+                "jscpd_path_escape",
+                "jscpd report uses an absolute path from another operating system",
+                remediation="Regenerate jscpd output on this checkout or provide repository-relative paths.",
             )
         try:
             name = path.resolve().relative_to(root.resolve()).as_posix()

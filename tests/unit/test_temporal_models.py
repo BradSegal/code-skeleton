@@ -64,7 +64,7 @@ FIXTURE = Path(__file__).parents[1] / "fixtures" / "temporal" / "two-state-corpu
 
 
 def _corpus() -> dict[str, Any]:
-    return cast(dict[str, Any], json.loads(FIXTURE.read_text()))
+    return cast(dict[str, Any], json.loads(FIXTURE.read_text(encoding="utf-8")))
 
 
 def _entity_id(label: str, side: str, ordinal: int = 0) -> str:
