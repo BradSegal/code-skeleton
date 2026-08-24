@@ -1,0 +1,228 @@
+{
+  "$defs": {
+    "ChangeBoundaryKind": {
+      "enum": [
+        "added",
+        "modified",
+        "moved",
+        "renamed",
+        "deleted",
+        "split",
+        "merged",
+        "reexported",
+        "generated",
+        "absent_baseline",
+        "provider_mismatch"
+      ],
+      "title": "ChangeBoundaryKind",
+      "type": "string"
+    },
+    "ChangeDimension": {
+      "enum": [
+        "textual",
+        "entity",
+        "api",
+        "relationship",
+        "diagnostic",
+        "test",
+        "runtime",
+        "documentation",
+        "configuration",
+        "workflow",
+        "data",
+        "environment",
+        "artifact",
+        "candidate"
+      ],
+      "title": "ChangeDimension",
+      "type": "string"
+    },
+    "ChangeEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "change_id": {
+          "title": "Change Id",
+          "type": "string"
+        },
+        "dimension": {
+          "$ref": "#/$defs/ChangeDimension"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "kinds": {
+          "items": {
+            "$ref": "#/$defs/ChangeBoundaryKind"
+          },
+          "title": "Kinds",
+          "type": "array"
+        },
+        "lineage": {
+          "enum": [
+            "exact",
+            "candidate",
+            "unavailable"
+          ],
+          "title": "Lineage",
+          "type": "string"
+        },
+        "predecessor_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Predecessor Refs",
+          "type": "array"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "successor_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Successor Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "change_id",
+        "dimension",
+        "kinds",
+        "lineage",
+        "rationale"
+      ],
+      "title": "ChangeEvidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "affected_evidence_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Affected Evidence Refs",
+      "type": "array"
+    },
+    "after_dossier_id": {
+      "title": "After Dossier Id",
+      "type": "string"
+    },
+    "after_evidence_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "After Evidence Digest",
+      "type": "string"
+    },
+    "after_provider_digests": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "After Provider Digests",
+      "type": "object"
+    },
+    "after_source_state_id": {
+      "title": "After Source State Id",
+      "type": "string"
+    },
+    "artifact_type": {
+      "const": "anatomize.change-dossier",
+      "default": "anatomize.change-dossier",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "before_dossier_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Before Dossier Id"
+    },
+    "before_evidence_digest": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Before Evidence Digest"
+    },
+    "before_provider_digests": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Before Provider Digests",
+      "type": "object"
+    },
+    "before_source_state_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Before Source State Id"
+    },
+    "blast_radius_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Blast Radius Refs",
+      "type": "array"
+    },
+    "changes": {
+      "items": {
+        "$ref": "#/$defs/ChangeEvidence"
+      },
+      "title": "Changes",
+      "type": "array"
+    },
+    "dossier_id": {
+      "title": "Dossier Id",
+      "type": "string"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "repository_id": {
+      "title": "Repository Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "dossier_id",
+    "repository_id",
+    "before_source_state_id",
+    "after_source_state_id",
+    "before_dossier_id",
+    "after_dossier_id",
+    "after_evidence_digest",
+    "changes"
+  ],
+  "title": "ChangeDossier",
+  "type": "object"
+}

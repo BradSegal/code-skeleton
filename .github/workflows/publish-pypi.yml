@@ -23,11 +23,18 @@ jobs:
       - name: Build
         run: |
           python -m pip install -U pip build twine check-wheel-contents
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[dev,docs]"
           test "v$(python -c 'import anatomize; print(anatomize.__version__)')" = "$GITHUB_REF_NAME"
           python -m ruff check .
           python -m mypy --strict src tests
-          python -m pytest
+          python -m pytest --cov=anatomize --cov-report=term --cov-fail-under=85
+          python scripts/benchmark_dossiers.py
+          python scripts/evaluate_agentic_workflows.py
+          python scripts/verify_documentation.py --root .
+          python scripts/generate_documentation.py --check
+          python -m mkdocs build --strict --site-dir site
+          python scripts/verify_documentation_site.py --root . --site-dir site
+          python scripts/verify_consumer_install.py --root .
           python -m build
           python -m twine check --strict dist/*
           check-wheel-contents dist/*.whl

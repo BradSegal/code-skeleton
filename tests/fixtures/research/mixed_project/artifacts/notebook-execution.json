@@ -1,0 +1,19 @@
+{
+  "status": "failed",
+  "cells": [
+    {
+      "cell_key": "notebook-cell:sha256:90d69cd869d4125dbf4d906c0da35ebb37013f50e888af3044074ee67bf0ba12",
+      "status": "passed",
+      "execution_count": 1,
+      "output_digests": []
+    },
+    {
+      "cell_key": "notebook-cell:sha256:eff9144e025846a3f15499d357a3d6bed12a110aaf1b2fb298cd4dac4fb502c8",
+      "status": "failed",
+      "execution_count": 2,
+      "output_digests": ["sha256:1111111111111111111111111111111111111111111111111111111111111111"],
+      "error_type": "RuntimeError",
+      "error_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  ]
+}

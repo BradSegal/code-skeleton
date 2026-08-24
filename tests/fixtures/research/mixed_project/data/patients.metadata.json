@@ -1,0 +1,8 @@
+{
+  "locator": "data/patients.csv",
+  "schema_identity": "schema:patients-v1",
+  "content_class": "sensitive",
+  "availability": "ignored",
+  "content_included": false,
+  "synthetic_metadata_only": true
+}

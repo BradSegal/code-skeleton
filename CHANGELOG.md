@@ -1,13 +1,59 @@
 # Changelog
 
-## 1.1.0
+All notable changes to this project are documented in this file.
+
+## 2.0.0 - 2026-08-24
+
+### Changed
+
+- Replace the provisional index, skeleton, and pack products with one
+  evidence-first `anatomize review` lifecycle shared by Python, CLI, and MCP.
+- Converge repository acquisition, provider normalization, exact state,
+  dossiers, comparison, consolidation, implementation intent, and closure on
+  one canonical evidence graph and one error/path/serialization contract.
+- Remove plugin discovery and provider execution. Optional evidence now enters
+  only through explicit bounded native artifacts or provider envelopes.
+- Remove superseded parsers, graphs, compatibility branches, commands, tests,
+  and documentation. There is intentionally no migration layer; rebuild
+  artifacts from source with the current release.
+
+### Added
+
+- Deterministic orientation, design, audit, localisation, implementation,
+  change-review, and closure dossiers with proof roles, reasons, budgets,
+  visible omissions, source-bound expansion, and human-readable rendering.
+- Canonical entities for Python, R, notebooks, tests, documentation,
+  configuration, workflows, data, artifacts, dependencies, diagnostics, and
+  runtime evidence.
+- Bounded adapters for captured LSP, SARIF 2.1.0, JUnit, coverage, mutation,
+  jscpd, Snakemake, targets, renv, CycloneDX, and RO-Crate artifacts.
+- Conservative implementation, test, and documentation candidates; complete
+  consolidation-question dossiers; separate consumer decision overlays and
+  currency checks.
+- Evidence-wide before/after comparison, unique exact move detection,
+  implementation obligations, and fresh-evidence closure accounting.
+- Cross-provider conflict materialization without last-writer-wins, exact
+  identity/coordinate reconciliation, content-free sessions, recoverable
+  immutable stores with advisory locking, and a read-only bounded MCP server.
+- A task-led, searchable GitHub Pages site with tracked generated capability,
+  Python API, and JSON Schema references; strict link and navigation checks;
+  public-artifact privacy and accessibility inspection; and least-privilege
+  default-branch deployment.
+
+### Assurance
+
+- Add realistic mixed-language lifecycle, agent-workflow, adverse parser,
+  Unicode, path, concurrency, recovery, MCP, packaging, clean-install,
+  documentation, performance, and held-out comprehension qualification.
+- Add software citation, security reporting, consolidated public documentation,
+  and a shipped agent skill that uses the same review workflow.
+
+## 1.1.0 - 2026-08-16
 
 - Preserve symbol spans and definition-level changes across explicit Git bases.
 - Retain multiple import, reference, test, documentation, and configuration reasons per impact node.
 - Preserve baseline consumers for deleted and moved definitions.
 - Add machine-readable capability discovery, optional explicit Pyright references, and bounded impact-derived review bundles.
-
-All notable changes to this project will be documented in this file.
 
 ## 1.0.0 - 2026-07-29
 

@@ -1,0 +1,31 @@
+{
+  "artifact_type": "anatomize.evidence",
+  "schema_version": "1.0.0",
+  "producer": {
+    "name": "anatomize",
+    "version": "fixture"
+  },
+  "repository_id": "repository:minimal",
+  "states": [
+    {
+      "record_type": "source_state",
+      "state_id": "state:minimal",
+      "repository_id": "repository:minimal",
+      "revision": "abc123",
+      "dirty": false,
+      "content_digest": "digest:minimal",
+      "file_count": 0
+    }
+  ],
+  "entities": [
+    {
+      "entity_type": "repository",
+      "entity_id": "entity:repository:minimal",
+      "source_state_id": "state:minimal",
+      "display_name": "minimal",
+      "location_ids": [],
+      "repository_id": "repository:minimal",
+      "root_name": "minimal"
+    }
+  ]
+}

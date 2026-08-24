@@ -1,0 +1,457 @@
+{
+  "$defs": {
+    "AlignedHunk": {
+      "additionalProperties": false,
+      "description": "One bounded correspondence or difference between two members.",
+      "properties": {
+        "hunk_id": {
+          "minLength": 1,
+          "title": "Hunk Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/HunkKind"
+        },
+        "left_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Left Digest"
+        },
+        "left_end_line": {
+          "minimum": 1,
+          "title": "Left End Line",
+          "type": "integer"
+        },
+        "left_member": {
+          "minimum": 0,
+          "title": "Left Member",
+          "type": "integer"
+        },
+        "left_start_line": {
+          "minimum": 1,
+          "title": "Left Start Line",
+          "type": "integer"
+        },
+        "preview": {
+          "anyOf": [
+            {
+              "maxLength": 2048,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preview"
+        },
+        "right_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Right Digest"
+        },
+        "right_end_line": {
+          "minimum": 1,
+          "title": "Right End Line",
+          "type": "integer"
+        },
+        "right_member": {
+          "minimum": 0,
+          "title": "Right Member",
+          "type": "integer"
+        },
+        "right_start_line": {
+          "minimum": 1,
+          "title": "Right Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hunk_id",
+        "kind",
+        "left_member",
+        "right_member",
+        "left_start_line",
+        "left_end_line",
+        "right_start_line",
+        "right_end_line"
+      ],
+      "title": "AlignedHunk",
+      "type": "object"
+    },
+    "CandidateGranularity": {
+      "enum": [
+        "file",
+        "definition",
+        "block",
+        "expression"
+      ],
+      "title": "CandidateGranularity",
+      "type": "string"
+    },
+    "CandidateRegion": {
+      "additionalProperties": false,
+      "description": "One exact member coordinate in a candidate group.",
+      "properties": {
+        "content_digest": {
+          "anyOf": [
+            {
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Digest"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "entity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entity Id"
+        },
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "source_state_id",
+        "path",
+        "start_line",
+        "end_line"
+      ],
+      "title": "CandidateRegion",
+      "type": "object"
+    },
+    "ConsolidationQuestion": {
+      "enum": [
+        "members_and_differences",
+        "public_contracts",
+        "callers_and_consumers",
+        "test_intent",
+        "runtime_context",
+        "documentation",
+        "workflows",
+        "history",
+        "provenance",
+        "conflicts",
+        "omissions",
+        "prior_decisions"
+      ],
+      "title": "ConsolidationQuestion",
+      "type": "string"
+    },
+    "EvidenceStrength": {
+      "description": "Strength claimed by one observation, never an aggregate score.",
+      "enum": [
+        "exact",
+        "derived",
+        "conservative",
+        "heuristic",
+        "declared",
+        "unknown"
+      ],
+      "title": "EvidenceStrength",
+      "type": "string"
+    },
+    "HunkKind": {
+      "enum": [
+        "equal",
+        "replace",
+        "insert",
+        "delete"
+      ],
+      "title": "HunkKind",
+      "type": "string"
+    },
+    "ReviewEvidenceGroup": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "question": {
+          "$ref": "#/$defs/ConsolidationQuestion"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question",
+        "summary"
+      ],
+      "title": "ReviewEvidenceGroup",
+      "type": "object"
+    },
+    "SimilarityCandidate": {
+      "additionalProperties": false,
+      "description": "A review candidate with method-native evidence and no decision verdict.",
+      "properties": {
+        "aligned_hunks": {
+          "items": {
+            "$ref": "#/$defs/AlignedHunk"
+          },
+          "title": "Aligned Hunks",
+          "type": "array"
+        },
+        "candidate_id": {
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "configuration_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "granularity": {
+          "$ref": "#/$defs/CandidateGranularity"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "members": {
+          "items": {
+            "$ref": "#/$defs/CandidateRegion"
+          },
+          "minItems": 2,
+          "title": "Members",
+          "type": "array"
+        },
+        "method": {
+          "$ref": "#/$defs/SimilarityMethod"
+        },
+        "method_version": {
+          "minLength": 1,
+          "title": "Method Version",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Run Id"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Threshold"
+        },
+        "token_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token Count"
+        },
+        "unmatched_member_regions": {
+          "items": {
+            "$ref": "#/$defs/CandidateRegion"
+          },
+          "title": "Unmatched Member Regions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "source_state_id",
+        "granularity",
+        "method",
+        "method_version",
+        "configuration_digest",
+        "members",
+        "strength",
+        "rationale"
+      ],
+      "title": "SimilarityCandidate",
+      "type": "object"
+    },
+    "SimilarityMethod": {
+      "enum": [
+        "exact",
+        "normalized",
+        "external_near_match"
+      ],
+      "title": "SimilarityMethod",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "anatomize.consolidation-dossier",
+      "default": "anatomize.consolidation-dossier",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "base_dossier_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Base Dossier Digest",
+      "type": "string"
+    },
+    "base_dossier_id": {
+      "title": "Base Dossier Id",
+      "type": "string"
+    },
+    "candidate": {
+      "$ref": "#/$defs/SimilarityCandidate"
+    },
+    "disposition_authority": {
+      "const": "consumer_overlay_only",
+      "default": "consumer_overlay_only",
+      "title": "Disposition Authority",
+      "type": "string"
+    },
+    "dossier_id": {
+      "title": "Dossier Id",
+      "type": "string"
+    },
+    "groups": {
+      "items": {
+        "$ref": "#/$defs/ReviewEvidenceGroup"
+      },
+      "title": "Groups",
+      "type": "array"
+    },
+    "repository_id": {
+      "title": "Repository Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_state_id": {
+      "title": "Source State Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "dossier_id",
+    "repository_id",
+    "source_state_id",
+    "base_dossier_id",
+    "base_dossier_digest",
+    "candidate",
+    "groups"
+  ],
+  "title": "ConsolidationDossier",
+  "type": "object"
+}

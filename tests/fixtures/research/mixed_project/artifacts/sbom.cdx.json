@@ -1,0 +1,12 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:00000000-0000-4000-8000-000000000029",
+  "components": [
+    {"bom-ref": "trialtools", "type": "application", "name": "trialtools", "version": "0.1.0"},
+    {"bom-ref": "pandas", "type": "library", "name": "pandas", "version": "2.3.1", "purl": "pkg:pypi/pandas@2.3.1"}
+  ],
+  "dependencies": [{"ref": "trialtools", "dependsOn": ["pandas"]}],
+  "vulnerabilities": [{"id": "OSV-SYNTHETIC-1", "ratings": [{"severity": "unknown"}], "affects": [{"ref": "pandas"}]}],
+  "compositions": [{"aggregate": "complete"}]
+}

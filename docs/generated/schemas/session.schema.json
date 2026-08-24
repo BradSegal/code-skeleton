@@ -1,0 +1,721 @@
+{
+  "$defs": {
+    "ArtifactBlob": {
+      "additionalProperties": false,
+      "description": "Compressed base64 transport for one exact session artifact.",
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "encoding": {
+          "const": "base64+zlib",
+          "default": "base64+zlib",
+          "title": "Encoding",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "content"
+      ],
+      "title": "ArtifactBlob",
+      "type": "object"
+    },
+    "ArtifactRole": {
+      "description": "Lifecycle role of bytes bound into a review session.",
+      "enum": [
+        "normalized_evidence",
+        "comparison",
+        "report",
+        "source_slice",
+        "auxiliary"
+      ],
+      "title": "ArtifactRole",
+      "type": "string"
+    },
+    "BudgetBinding": {
+      "additionalProperties": false,
+      "description": "One declared resource or output budget and its final use.",
+      "properties": {
+        "limit": {
+          "minimum": 0,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "unit": {
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "used": {
+          "minimum": 0,
+          "title": "Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "unit",
+        "limit",
+        "used"
+      ],
+      "title": "BudgetBinding",
+      "type": "object"
+    },
+    "HistoryStatus": {
+      "description": "Availability and trustworthiness of source history around one state.",
+      "enum": [
+        "complete",
+        "shallow",
+        "unavailable",
+        "ambiguous"
+      ],
+      "title": "HistoryStatus",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "OmissionScope": {
+      "description": "Session surface deliberately absent or incomplete.",
+      "enum": [
+        "provider",
+        "source",
+        "evidence",
+        "index",
+        "report",
+        "slice",
+        "budget"
+      ],
+      "title": "OmissionScope",
+      "type": "string"
+    },
+    "ProviderRunStatus": {
+      "description": "Terminal state of one provider attempt.",
+      "enum": [
+        "complete",
+        "partial",
+        "unavailable",
+        "failed",
+        "cancelled"
+      ],
+      "title": "ProviderRunStatus",
+      "type": "string"
+    },
+    "ProviderStateBinding": {
+      "additionalProperties": false,
+      "description": "Exact provider/configuration/artifact state used for one source state.",
+      "properties": {
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/StateArtifactBinding"
+          },
+          "title": "Artifacts",
+          "type": "array"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "configuration_digest": {
+          "minLength": 1,
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "provider_id": {
+          "minLength": 1,
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "provider_version": {
+          "minLength": 1,
+          "title": "Provider Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ProviderRunStatus"
+        }
+      },
+      "required": [
+        "provider_run_id",
+        "provider_id",
+        "provider_version",
+        "configuration_digest",
+        "status"
+      ],
+      "title": "ProviderStateBinding",
+      "type": "object"
+    },
+    "QueryBinding": {
+      "additionalProperties": false,
+      "description": "Exact normalized request whose products the session contains.",
+      "properties": {
+        "operation": {
+          "minLength": 1,
+          "title": "Operation",
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Parameters",
+          "type": "object"
+        },
+        "query_id": {
+          "minLength": 1,
+          "title": "Query Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "query_id",
+        "operation"
+      ],
+      "title": "QueryBinding",
+      "type": "object"
+    },
+    "ReviewSessionManifest": {
+      "additionalProperties": false,
+      "description": "Complete provenance for one reproducible agent review session.",
+      "properties": {
+        "artifact_type": {
+          "const": "anatomize.session",
+          "default": "anatomize.session",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/SessionArtifact"
+          },
+          "minItems": 1,
+          "title": "Artifacts",
+          "type": "array"
+        },
+        "budgets": {
+          "items": {
+            "$ref": "#/$defs/BudgetBinding"
+          },
+          "minItems": 1,
+          "title": "Budgets",
+          "type": "array"
+        },
+        "configuration_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "deterministic": {
+          "default": true,
+          "title": "Deterministic",
+          "type": "boolean"
+        },
+        "omissions": {
+          "items": {
+            "$ref": "#/$defs/SessionOmission"
+          },
+          "title": "Omissions",
+          "type": "array"
+        },
+        "policy_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "providers": {
+          "items": {
+            "$ref": "#/$defs/SessionProviderBinding"
+          },
+          "minItems": 1,
+          "title": "Providers",
+          "type": "array"
+        },
+        "query": {
+          "$ref": "#/$defs/QueryBinding"
+        },
+        "recorded_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recorded At"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "schemas": {
+          "items": {
+            "$ref": "#/$defs/SchemaBinding"
+          },
+          "minItems": 1,
+          "title": "Schemas",
+          "type": "array"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "source_states": {
+          "items": {
+            "$ref": "#/$defs/StateManifest"
+          },
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Source States",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/SessionStatus"
+        }
+      },
+      "required": [
+        "session_id",
+        "repository_id",
+        "status",
+        "configuration_digest",
+        "policy_digest",
+        "source_states",
+        "schemas",
+        "providers",
+        "query",
+        "budgets",
+        "artifacts"
+      ],
+      "title": "ReviewSessionManifest",
+      "type": "object"
+    },
+    "SchemaBinding": {
+      "additionalProperties": false,
+      "description": "Exact public schema used by one session artifact family.",
+      "properties": {
+        "artifact_type": {
+          "minLength": 1,
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "schema_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Schema Digest",
+          "type": "string"
+        },
+        "schema_version": {
+          "minLength": 1,
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_type",
+        "schema_version",
+        "schema_digest"
+      ],
+      "title": "SchemaBinding",
+      "type": "object"
+    },
+    "SessionArtifact": {
+      "additionalProperties": false,
+      "description": "Digest-bound portable artifact produced or consumed by a session.",
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "derived_from_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Derived From Ids",
+          "type": "array"
+        },
+        "deterministic": {
+          "default": true,
+          "title": "Deterministic",
+          "type": "boolean"
+        },
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "generated_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generated At"
+        },
+        "media_type": {
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "portable_path": {
+          "minLength": 1,
+          "title": "Portable Path",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Run Id"
+        },
+        "role": {
+          "$ref": "#/$defs/ArtifactRole"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "source_state_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source State Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "role",
+        "digest",
+        "size_bytes",
+        "media_type",
+        "portable_path"
+      ],
+      "title": "SessionArtifact",
+      "type": "object"
+    },
+    "SessionOmission": {
+      "additionalProperties": false,
+      "description": "Explicitly bounded absence retained in a session manifest.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "omission_id": {
+          "minLength": 1,
+          "title": "Omission Id",
+          "type": "string"
+        },
+        "provider_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Id"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/OmissionScope"
+        }
+      },
+      "required": [
+        "omission_id",
+        "scope",
+        "code",
+        "rationale"
+      ],
+      "title": "SessionOmission",
+      "type": "object"
+    },
+    "SessionProviderBinding": {
+      "additionalProperties": false,
+      "description": "Provider identity projected from the canonical state manifest.",
+      "properties": {
+        "configuration_digest": {
+          "minLength": 1,
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "provider_id": {
+          "minLength": 1,
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "provider_version": {
+          "minLength": 1,
+          "title": "Provider Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ProviderRunStatus"
+        }
+      },
+      "required": [
+        "provider_run_id",
+        "provider_id",
+        "provider_version",
+        "configuration_digest",
+        "status"
+      ],
+      "title": "SessionProviderBinding",
+      "type": "object"
+    },
+    "SessionStatus": {
+      "description": "Terminal state of an attempted review session.",
+      "enum": [
+        "complete",
+        "partial",
+        "failed",
+        "cancelled"
+      ],
+      "title": "SessionStatus",
+      "type": "string"
+    },
+    "SourceStateRecord": {
+      "additionalProperties": false,
+      "description": "Portable identity of one repository source state.",
+      "properties": {
+        "content_digest": {
+          "minLength": 1,
+          "title": "Content Digest",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        },
+        "file_count": {
+          "minimum": 0,
+          "title": "File Count",
+          "type": "integer"
+        },
+        "record_type": {
+          "const": "source_state",
+          "default": "source_state",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "state_id": {
+          "minLength": 1,
+          "title": "State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state_id",
+        "repository_id",
+        "dirty",
+        "content_digest",
+        "file_count"
+      ],
+      "title": "SourceStateRecord",
+      "type": "object"
+    },
+    "StateArtifactBinding": {
+      "additionalProperties": false,
+      "description": "One provider artifact identity retained without its native payload.",
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "digest": {
+          "minLength": 1,
+          "title": "Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "digest"
+      ],
+      "title": "StateArtifactBinding",
+      "type": "object"
+    },
+    "StateManifest": {
+      "additionalProperties": false,
+      "description": "Portable exact state identity for one side of a comparison.",
+      "properties": {
+        "artifact_type": {
+          "const": "anatomize.state-manifest",
+          "default": "anatomize.state-manifest",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "baseline_available": {
+          "title": "Baseline Available",
+          "type": "boolean"
+        },
+        "configuration_digest": {
+          "minLength": 1,
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "evidence_artifact_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Evidence Artifact Digest",
+          "type": "string"
+        },
+        "evidence_schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Evidence Schema Version",
+          "type": "string"
+        },
+        "generated_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Generated Entity Ids",
+          "type": "array"
+        },
+        "history_status": {
+          "$ref": "#/$defs/HistoryStatus"
+        },
+        "provider_states": {
+          "items": {
+            "$ref": "#/$defs/ProviderStateBinding"
+          },
+          "title": "Provider States",
+          "type": "array"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "source_state": {
+          "$ref": "#/$defs/SourceStateRecord"
+        }
+      },
+      "required": [
+        "repository_id",
+        "source_state",
+        "evidence_artifact_digest",
+        "configuration_digest",
+        "history_status",
+        "baseline_available"
+      ],
+      "title": "StateManifest",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Self-contained deterministic export from which the derived store is rebuilt.",
+  "properties": {
+    "artifact_type": {
+      "const": "anatomize.session-bundle",
+      "default": "anatomize.session-bundle",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "blobs": {
+      "items": {
+        "$ref": "#/$defs/ArtifactBlob"
+      },
+      "minItems": 1,
+      "title": "Blobs",
+      "type": "array"
+    },
+    "bundle_id": {
+      "minLength": 1,
+      "title": "Bundle Id",
+      "type": "string"
+    },
+    "manifest": {
+      "$ref": "#/$defs/ReviewSessionManifest"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "bundle_id",
+    "manifest",
+    "blobs"
+  ],
+  "title": "ReviewSessionBundle",
+  "type": "object"
+}

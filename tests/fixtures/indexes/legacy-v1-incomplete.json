@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "root_name": "incomplete-repository",
+  "source_state": {
+    "commit": null,
+    "dirty": false,
+    "python_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "python_file_count": 1
+  },
+  "python_roots": ["."],
+  "modules": [{"module": "core", "path": "core.py", "imports": [], "exports": []}],
+  "symbols": [{
+    "name": "value",
+    "qualified_name": "core.value",
+    "kind": "function",
+    "path": "core.py",
+    "line": 1,
+    "public": true
+  }],
+  "import_edges": [],
+  "limitations": []
+}

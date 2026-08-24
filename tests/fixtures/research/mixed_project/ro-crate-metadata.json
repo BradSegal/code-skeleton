@@ -1,0 +1,10 @@
+{
+  "@context": "https://w3id.org/ro/crate/1.2/context",
+  "@graph": [
+    {"@id": "./", "@type": "Dataset", "name": "Trialtools research fixture", "hasPart": [{"@id": "data/public.csv"}, {"@id": "data/patients.csv"}, {"@id": "reports/result.html"}, {"@id": "s3://example.invalid/external.parquet"}]},
+    {"@id": "data/public.csv", "@type": "File", "name": "Synthetic public data", "encodingFormat": "text/csv", "contentSize": "38"},
+    {"@id": "data/patients.csv", "@type": "File", "name": "Absent confidential cohort", "encodingFormat": "text/csv", "anatomize:sensitive": true, "anatomize:ignored": true},
+    {"@id": "reports/result.html", "@type": "File", "name": "Generated report", "encodingFormat": "text/html", "dateCreated": "2026-08-01"},
+    {"@id": "s3://example.invalid/external.parquet", "@type": "File", "name": "Remote covariates", "encodingFormat": "application/vnd.apache.parquet"}
+  ]
+}

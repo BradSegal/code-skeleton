@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If Anatomize supports your research software, please cite this software."
+type: software
+title: "Anatomize: evidence-first repository review for agentic development"
+authors:
+  - family-names: Segal
+    given-names: Bradley Max
+version: 2.0.0
+date-released: 2026-08-24
+license: MIT
+repository-code: "https://github.com/BradSegal/anatomize"
+url: "https://github.com/BradSegal/anatomize"
+keywords:
+  - code analysis
+  - repository intelligence
+  - research software
+  - agent support

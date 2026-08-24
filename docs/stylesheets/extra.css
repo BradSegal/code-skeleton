@@ -1,0 +1,66 @@
+:root {
+  --anatomize-line: color-mix(in srgb, var(--md-default-fg-color) 18%, transparent);
+  --anatomize-surface: color-mix(in srgb, var(--md-primary-fg-color) 7%, transparent);
+}
+
+.md-typeset .anatomize-hero {
+  margin: 1rem 0 2rem;
+  padding: clamp(1.4rem, 4vw, 2.8rem);
+  border: 1px solid var(--anatomize-line);
+  border-radius: 0.8rem;
+  background: linear-gradient(135deg, var(--anatomize-surface), transparent 72%);
+}
+
+.md-typeset .anatomize-hero h1 {
+  margin-bottom: 0.5rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.md-typeset .anatomize-hero pre,
+.md-typeset .anatomize-hero code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.md-typeset .anatomize-paths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.8rem;
+  margin: 1.5rem 0;
+}
+
+.md-typeset .anatomize-path {
+  display: block;
+  padding: 1rem;
+  border: 1px solid var(--anatomize-line);
+  border-radius: 0.55rem;
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .anatomize-path:hover {
+  border-color: var(--md-accent-fg-color);
+  background: var(--anatomize-surface);
+}
+
+.md-typeset .anatomize-path h3 {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--md-primary-fg-color);
+}
+
+:focus-visible {
+  outline: 0.18rem solid var(--md-accent-fg-color);
+  outline-offset: 0.16rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

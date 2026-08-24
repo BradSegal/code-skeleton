@@ -1,0 +1,4 @@
+name,command,path,dependencies,dynamic,sensitive
+cohort,prepare_labels(),derived/cohort.parquet,,,true
+effect,estimate_effect(cohort),derived/effect.rds,cohort,false,false
+report,quarto_render(),reports/result.html,effect,false,false

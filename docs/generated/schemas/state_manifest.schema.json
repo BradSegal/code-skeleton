@@ -1,0 +1,229 @@
+{
+  "$defs": {
+    "HistoryStatus": {
+      "description": "Availability and trustworthiness of source history around one state.",
+      "enum": [
+        "complete",
+        "shallow",
+        "unavailable",
+        "ambiguous"
+      ],
+      "title": "HistoryStatus",
+      "type": "string"
+    },
+    "ProviderRunStatus": {
+      "description": "Terminal state of one provider attempt.",
+      "enum": [
+        "complete",
+        "partial",
+        "unavailable",
+        "failed",
+        "cancelled"
+      ],
+      "title": "ProviderRunStatus",
+      "type": "string"
+    },
+    "ProviderStateBinding": {
+      "additionalProperties": false,
+      "description": "Exact provider/configuration/artifact state used for one source state.",
+      "properties": {
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/StateArtifactBinding"
+          },
+          "title": "Artifacts",
+          "type": "array"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "configuration_digest": {
+          "minLength": 1,
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "provider_id": {
+          "minLength": 1,
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "provider_version": {
+          "minLength": 1,
+          "title": "Provider Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ProviderRunStatus"
+        }
+      },
+      "required": [
+        "provider_run_id",
+        "provider_id",
+        "provider_version",
+        "configuration_digest",
+        "status"
+      ],
+      "title": "ProviderStateBinding",
+      "type": "object"
+    },
+    "SourceStateRecord": {
+      "additionalProperties": false,
+      "description": "Portable identity of one repository source state.",
+      "properties": {
+        "content_digest": {
+          "minLength": 1,
+          "title": "Content Digest",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        },
+        "file_count": {
+          "minimum": 0,
+          "title": "File Count",
+          "type": "integer"
+        },
+        "record_type": {
+          "const": "source_state",
+          "default": "source_state",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "state_id": {
+          "minLength": 1,
+          "title": "State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state_id",
+        "repository_id",
+        "dirty",
+        "content_digest",
+        "file_count"
+      ],
+      "title": "SourceStateRecord",
+      "type": "object"
+    },
+    "StateArtifactBinding": {
+      "additionalProperties": false,
+      "description": "One provider artifact identity retained without its native payload.",
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "digest": {
+          "minLength": 1,
+          "title": "Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "digest"
+      ],
+      "title": "StateArtifactBinding",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Portable exact state identity for one side of a comparison.",
+  "properties": {
+    "artifact_type": {
+      "const": "anatomize.state-manifest",
+      "default": "anatomize.state-manifest",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "baseline_available": {
+      "title": "Baseline Available",
+      "type": "boolean"
+    },
+    "configuration_digest": {
+      "minLength": 1,
+      "title": "Configuration Digest",
+      "type": "string"
+    },
+    "evidence_artifact_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Evidence Artifact Digest",
+      "type": "string"
+    },
+    "evidence_schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Evidence Schema Version",
+      "type": "string"
+    },
+    "generated_entity_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Generated Entity Ids",
+      "type": "array"
+    },
+    "history_status": {
+      "$ref": "#/$defs/HistoryStatus"
+    },
+    "provider_states": {
+      "items": {
+        "$ref": "#/$defs/ProviderStateBinding"
+      },
+      "title": "Provider States",
+      "type": "array"
+    },
+    "repository_id": {
+      "minLength": 1,
+      "title": "Repository Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_state": {
+      "$ref": "#/$defs/SourceStateRecord"
+    }
+  },
+  "required": [
+    "repository_id",
+    "source_state",
+    "evidence_artifact_digest",
+    "configuration_digest",
+    "history_status",
+    "baseline_available"
+  ],
+  "title": "StateManifest",
+  "type": "object"
+}

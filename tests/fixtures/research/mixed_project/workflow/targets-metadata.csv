@@ -1,0 +1,4 @@
+name,bytes,data,missing,stale
+cohort,214,cohort-hash,false,false
+effect,92,effect-hash,false,false
+report,1200,report-old-hash,false,true

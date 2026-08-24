@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "DecisionDisposition": {
+      "enum": [
+        "unreviewed",
+        "investigate",
+        "keep",
+        "consolidate",
+        "generalise",
+        "separate",
+        "accepted_duplicate"
+      ],
+      "title": "DecisionDisposition",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "anatomize.decision-overlay",
+      "default": "anatomize.decision-overlay",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "candidate_id": {
+      "title": "Candidate Id",
+      "type": "string"
+    },
+    "decision_id": {
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "decision_policy_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Decision Policy Digest",
+      "type": "string"
+    },
+    "decision_schema_version": {
+      "title": "Decision Schema Version",
+      "type": "string"
+    },
+    "disposition": {
+      "$ref": "#/$defs/DecisionDisposition"
+    },
+    "evidence_digests": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Evidence Digests",
+      "type": "object"
+    },
+    "member_evidence_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Member Evidence Digest",
+      "type": "string"
+    },
+    "owner_namespace": {
+      "title": "Owner Namespace",
+      "type": "string"
+    },
+    "preserved_divergence": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Preserved Divergence",
+      "type": "array"
+    },
+    "provider_digests": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Provider Digests",
+      "type": "object"
+    },
+    "rationale": {
+      "title": "Rationale",
+      "type": "string"
+    },
+    "relevant_source_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Relevant Source Digest",
+      "type": "string"
+    },
+    "review_conditions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Review Conditions",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_state_id": {
+      "title": "Source State Id",
+      "type": "string"
+    },
+    "stable_candidate_key": {
+      "title": "Stable Candidate Key",
+      "type": "string"
+    }
+  },
+  "required": [
+    "decision_id",
+    "candidate_id",
+    "stable_candidate_key",
+    "source_state_id",
+    "relevant_source_digest",
+    "member_evidence_digest",
+    "provider_digests",
+    "evidence_digests",
+    "decision_schema_version",
+    "decision_policy_digest",
+    "owner_namespace",
+    "disposition",
+    "rationale"
+  ],
+  "title": "DecisionOverlay",
+  "type": "object"
+}

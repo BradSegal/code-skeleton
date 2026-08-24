@@ -1,0 +1,166 @@
+{
+  "dossier": {
+    "artifact_type": "anatomize.dossier",
+    "base_dossier_id": null,
+    "boundary": {
+      "authority": "Anatomize supplies source-bound evidence and does not choose, apply, or approve a change.",
+      "profile": "change_review",
+      "question": "Bind the exact baseline revision.",
+      "satisfied_stop_conditions": [
+        "target resolved exactly: state:before",
+        "bounded relationship frontier and omissions are explicit"
+      ],
+      "targets": [
+        {
+          "message": "Target resolved exactly.",
+          "resolved_ids": [
+            "state:before"
+          ],
+          "selector": {
+            "identity": "state:before",
+            "kind": "revision",
+            "locator": null,
+            "source_state_id": null
+          },
+          "status": "exact"
+        }
+      ],
+      "unsatisfied_stop_conditions": []
+    },
+    "budget_use": {
+      "depth": {
+        "limit": 0,
+        "used": 0
+      },
+      "inline_content_bytes": {
+        "limit": 24576,
+        "used": 0
+      },
+      "items": {
+        "limit": 8,
+        "used": 1
+      },
+      "payload_bytes": {
+        "limit": 49152,
+        "used": 3409
+      }
+    },
+    "content": [],
+    "dossier_id": "dossier:sha256:b5f6d26a19b41dd979e7fd20e38fe777a2fdf1b81225ca5c75ae6e0ee6ecbfc1",
+    "expansions": [],
+    "groups": [
+      {
+        "group_id": "dossier-group:sha256:abdb6f0b509f2e00bbd4670c7568f62683bd8656ab5e19aa52e0de373dbdde0f",
+        "item_ids": [
+          "dossier-item:sha256:32f506029c2c6b979b1e4e205597d03fe919e282c215d03de88c302436510c7a"
+        ],
+        "proof_purpose": "Bind the exact source state represented by this dossier.",
+        "required": true,
+        "role": "state",
+        "section": "decision_critical"
+      }
+    ],
+    "items": [
+      {
+        "conflict_ids": [],
+        "content_id": null,
+        "distance": 0,
+        "entity_id": null,
+        "evidence_kind": "source_state",
+        "item_id": "dossier-item:sha256:32f506029c2c6b979b1e4e205597d03fe919e282c215d03de88c302436510c7a",
+        "locators": [],
+        "observations": [],
+        "provider_run_ids": [],
+        "record_id": "state:before",
+        "record_kind": "state",
+        "relationship_ids": [],
+        "required": true,
+        "role": "state",
+        "section": "decision_critical",
+        "selection_reasons": [
+          {
+            "code": "profile_required",
+            "message": "Required state role for change_review.",
+            "object_id": null,
+            "relationship_id": null,
+            "subject_id": "state:before"
+          },
+          {
+            "code": "exact_target",
+            "message": "Resolved the explicit target exactly.",
+            "object_id": null,
+            "relationship_id": null,
+            "subject_id": "state:before"
+          }
+        ],
+        "strength": "unknown",
+        "unknown_ids": []
+      }
+    ],
+    "limitations": [
+      "Dynamic dispatch is outside this provider scope."
+    ],
+    "omissions": [],
+    "policy_digest": "sha256:823412d1eacb67956220e532959f0104603057c88704863ca38e7cd188fda812",
+    "provider_run_ids": [
+      "provider:ast",
+      "provider:semantic"
+    ],
+    "repository_id": "repository:fixture",
+    "request_id": "dossier-request:sha256:109f77aaa0aeaac3af5765433d7840073c86bdfac996f26c557e37ae66d9f2ec",
+    "schema_version": "1.0.0",
+    "session_id": "session:dossier-known-truth",
+    "session_manifest_digest": "sha256:05b3abf2579a5eb66403cd78be557fd860633a1fe2103c7642030defe32c657f",
+    "source_state_ids": [
+      "state:before",
+      "state:after"
+    ],
+    "status": "complete"
+  },
+  "request": {
+    "artifact_type": "anatomize.dossier-request",
+    "budget": {
+      "max_content_block_bytes": 8192,
+      "max_depth": 0,
+      "max_disclosed_omission_ids": 32,
+      "max_inline_content_bytes": 24576,
+      "max_items": 8,
+      "max_payload_bytes": 49152
+    },
+    "direction": "both",
+    "exclude": [],
+    "expansion": null,
+    "filters": {
+      "content_classes": [],
+      "evidence_kinds": [],
+      "provider_ids": [],
+      "relationship_categories": [],
+      "roles": [],
+      "source_state_ids": []
+    },
+    "include": [],
+    "profile": "change_review",
+    "question": "Bind the exact baseline revision.",
+    "request_id": "dossier-request:sha256:109f77aaa0aeaac3af5765433d7840073c86bdfac996f26c557e37ae66d9f2ec",
+    "schema_version": "1.0.0",
+    "session_id": "session:dossier-known-truth",
+    "session_manifest_digest": "sha256:05b3abf2579a5eb66403cd78be557fd860633a1fe2103c7642030defe32c657f",
+    "slice_policy": {
+      "allowed_content_classes": [
+        "ordinary"
+      ],
+      "context_after": 3,
+      "context_before": 3,
+      "include_enclosing_structure": true,
+      "inline_content": true
+    },
+    "targets": [
+      {
+        "identity": "state:before",
+        "kind": "revision",
+        "locator": null,
+        "source_state_id": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "locator": "data/vendor-archive.zip",
+  "media_type": "application/zip",
+  "availability": "opaque",
+  "content_included": false,
+  "synthetic_metadata_only": true
+}

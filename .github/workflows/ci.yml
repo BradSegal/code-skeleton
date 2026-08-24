@@ -6,11 +6,16 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          - {os: ubuntu-latest, python-version: "3.10"}
+          - {os: ubuntu-latest, python-version: "3.11"}
+          - {os: ubuntu-latest, python-version: "3.12"}
+          - {os: ubuntu-latest, python-version: "3.13"}
+          - {os: windows-latest, python-version: "3.12"}
 
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +28,15 @@ jobs:
       - name: Install
         run: |
           python -m pip install -U pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[dev,docs]"
+
+      - name: Set up uv for lock verification
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: astral-sh/setup-uv@v6
+
+      - name: Verify development lock
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: uv lock --check
 
       - name: Lint
         run: |
@@ -34,8 +47,24 @@ jobs:
           python -m mypy --strict src tests
 
       - name: Test
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
         run: |
           python -m pytest
+
+      - name: Coverage contract
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          python -m pytest --cov=anatomize --cov-report=term --cov-fail-under=85
+
+      - name: Dossier performance contract
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          python scripts/benchmark_dossiers.py
+
+      - name: Held-out agent workflow evaluation
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          python scripts/evaluate_agentic_workflows.py
 
       - name: Build
         run: |
@@ -44,18 +73,28 @@ jobs:
           python -m twine check --strict dist/*
           check-wheel-contents dist/*.whl
 
-      - name: Install wheel smoke test
+      - name: Verify independent consumer installation
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         run: |
-          python -m venv .venv-smoke
-          . .venv-smoke/bin/activate
-          python -m pip install -U pip
-          python -m pip install dist/*.whl
-          cd "$(mktemp -d)"
-          anatomize --version
-          anatomize index "$GITHUB_WORKSPACE" --output repository-index.json
-          anatomize find RepositoryIndex --root "$GITHUB_WORKSPACE"
+          python scripts/verify_consumer_install.py --root .
 
-  pyright-e2e:
+      - name: Installed review smoke test
+        run: |
+          python -m pip install dist/*.whl
+          anatomize --version
+          anatomize review capabilities --format json
+
+      - name: Verify public documentation and self-review
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: |
+          python scripts/verify_documentation.py --root .
+          python scripts/generate_documentation.py --check
+          python -m mkdocs build --strict --site-dir site
+          python scripts/verify_documentation_site.py --root . --site-dir site
+          anatomize review start . --format json --output self-session.json
+          anatomize review dossier self-session.json --profile orientation --format markdown --output self-orientation.md
+
+  package-boundary:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,24 +104,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Pyright
-        run: |
-          npm i -g pyright
-          command -v pyright
-          command -v pyright-langserver
-
       - name: Install
         run: |
           python -m pip install -U pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[dev,docs]"
 
-      - name: Pyright-backed e2e
-        env:
-          ANATOMIZE_RUN_PYRIGHT_E2E: "1"
+      - name: MCP and clean wheel qualification
         run: |
-          python -m pytest tests/e2e/test_pack_pyright_uses.py
+          python -m pytest tests/e2e/test_mcp_cli.py tests/e2e/test_mcp_packaging.py tests/integration/test_mcp_client.py
+          python scripts/verify_consumer_install.py --root .

@@ -1,0 +1,3332 @@
+{
+  "$defs": {
+    "AliasRecord": {
+      "additionalProperties": false,
+      "description": "Lossless reconciliation of one provider identity across state-scoped entities.",
+      "properties": {
+        "alias_id": {
+          "minLength": 1,
+          "title": "Alias Id",
+          "type": "string"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/IdentityCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "$ref": "#/$defs/IdentityReason"
+          },
+          "minItems": 1,
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "record_type": {
+          "const": "alias",
+          "default": "alias",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "resolution": {
+          "$ref": "#/$defs/IdentityResolutionStatus"
+        },
+        "scheme": {
+          "minLength": 1,
+          "title": "Scheme",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "value": {
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "alias_id",
+        "source_state_id",
+        "scheme",
+        "value",
+        "resolution",
+        "provider_run_ids",
+        "reason_codes",
+        "rationale"
+      ],
+      "title": "AliasRecord",
+      "type": "object"
+    },
+    "ArtifactEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact_kind": {
+          "minLength": 1,
+          "title": "Artifact Kind",
+          "type": "string"
+        },
+        "digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Digest"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "artifact",
+          "default": "artifact",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "generated": {
+          "default": false,
+          "title": "Generated",
+          "type": "boolean"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "artifact_kind"
+      ],
+      "title": "ArtifactEntity",
+      "type": "object"
+    },
+    "CandidateKind": {
+      "description": "Review candidate types that remain distinct from established edges.",
+      "enum": [
+        "reference",
+        "similarity",
+        "duplication",
+        "lineage",
+        "ownership",
+        "documentation_drift"
+      ],
+      "title": "CandidateKind",
+      "type": "string"
+    },
+    "CandidateRecord": {
+      "additionalProperties": false,
+      "description": "A bounded review candidate, never an established edge or verdict.",
+      "properties": {
+        "candidate_id": {
+          "minLength": 1,
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/CandidateKind"
+        },
+        "member_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Member Entity Ids",
+          "type": "array"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Observation Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "candidate",
+          "default": "candidate",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "source_state_id",
+        "kind",
+        "member_entity_ids",
+        "method",
+        "strength",
+        "rationale"
+      ],
+      "title": "CandidateRecord",
+      "type": "object"
+    },
+    "CompletenessRecord": {
+      "additionalProperties": false,
+      "description": "Provider coverage for one state, scope and evidence-family set.",
+      "properties": {
+        "completeness_id": {
+          "minLength": 1,
+          "title": "Completeness Id",
+          "type": "string"
+        },
+        "evidence_families": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Families",
+          "type": "array"
+        },
+        "omission_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Omission Ids",
+          "type": "array"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "completeness",
+          "default": "completeness",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "scope_id": {
+          "minLength": 1,
+          "title": "Scope Id",
+          "type": "string"
+        },
+        "scope_type": {
+          "enum": [
+            "repository",
+            "entity",
+            "location",
+            "query"
+          ],
+          "title": "Scope Type",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/CompletenessStatus"
+        }
+      },
+      "required": [
+        "completeness_id",
+        "source_state_id",
+        "provider_run_id",
+        "scope_type",
+        "scope_id",
+        "evidence_families",
+        "status"
+      ],
+      "title": "CompletenessRecord",
+      "type": "object"
+    },
+    "CompletenessStatus": {
+      "description": "Coverage of one provider over one explicitly declared scope.",
+      "enum": [
+        "complete",
+        "partial",
+        "unavailable",
+        "unknown"
+      ],
+      "title": "CompletenessStatus",
+      "type": "string"
+    },
+    "ConfigurationEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration_kind": {
+          "minLength": 1,
+          "title": "Configuration Kind",
+          "type": "string"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "configuration",
+          "default": "configuration",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "configuration_kind"
+      ],
+      "title": "ConfigurationEntity",
+      "type": "object"
+    },
+    "ConflictRecord": {
+      "additionalProperties": false,
+      "description": "Explicit contradiction retained without overwriting either observation.",
+      "properties": {
+        "conflict_id": {
+          "minLength": 1,
+          "title": "Conflict Id",
+          "type": "string"
+        },
+        "observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Observation Ids",
+          "type": "array"
+        },
+        "record_type": {
+          "const": "conflict",
+          "default": "conflict",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ConflictStatus",
+          "default": "unresolved"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "target_id": {
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        },
+        "target_type": {
+          "enum": [
+            "entity",
+            "edge",
+            "contract",
+            "candidate"
+          ],
+          "title": "Target Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "conflict_id",
+        "source_state_id",
+        "target_type",
+        "target_id",
+        "observation_ids",
+        "summary"
+      ],
+      "title": "ConflictRecord",
+      "type": "object"
+    },
+    "ConflictStatus": {
+      "description": "Whether contradictory observations have external adjudication.",
+      "enum": [
+        "unresolved",
+        "externally_resolved"
+      ],
+      "title": "ConflictStatus",
+      "type": "string"
+    },
+    "ContentClass": {
+      "description": "Privacy-aware file/content classification.",
+      "enum": [
+        "ordinary",
+        "binary",
+        "large",
+        "generated",
+        "vendor",
+        "ignored",
+        "sensitive",
+        "external",
+        "opaque"
+      ],
+      "title": "ContentClass",
+      "type": "string"
+    },
+    "ContractKind": {
+      "description": "Declared contract families, kept separate from observed behavior.",
+      "enum": [
+        "api",
+        "behavior",
+        "configuration",
+        "schema",
+        "data",
+        "workflow",
+        "runtime"
+      ],
+      "title": "ContractKind",
+      "type": "string"
+    },
+    "ContractRecord": {
+      "additionalProperties": false,
+      "description": "A declared contract, distinct from observed behavior and diagnostics.",
+      "properties": {
+        "contract_id": {
+          "minLength": 1,
+          "title": "Contract Id",
+          "type": "string"
+        },
+        "declaration_location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Declaration Location Ids",
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/$defs/ContractKind"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "record_type": {
+          "const": "declared_contract",
+          "default": "declared_contract",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "subject_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Subject Entity Ids",
+          "type": "array"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        },
+        "terms_digest": {
+          "minLength": 1,
+          "title": "Terms Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "contract_id",
+        "source_state_id",
+        "kind",
+        "subject_entity_ids",
+        "summary",
+        "terms_digest"
+      ],
+      "title": "ContractRecord",
+      "type": "object"
+    },
+    "DataEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "content_class": {
+          "$ref": "#/$defs/ContentClass",
+          "default": "opaque"
+        },
+        "data_kind": {
+          "minLength": 1,
+          "title": "Data Kind",
+          "type": "string"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "data",
+          "default": "data",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "media_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Media Type"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "schema_identity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schema Identity"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "data_kind"
+      ],
+      "title": "DataEntity",
+      "type": "object"
+    },
+    "DependencyEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "ecosystem": {
+          "minLength": 1,
+          "title": "Ecosystem",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "dependency",
+          "default": "dependency",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "package": {
+          "minLength": 1,
+          "title": "Package",
+          "type": "string"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "scope": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "ecosystem",
+        "package"
+      ],
+      "title": "DependencyEntity",
+      "type": "object"
+    },
+    "DiagnosticEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline_state": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Baseline State"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "duplicate_count": {
+          "default": 1,
+          "minimum": 1,
+          "title": "Duplicate Count",
+          "type": "integer"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "diagnostic",
+          "default": "diagnostic",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "fingerprints": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Fingerprints",
+          "type": "object"
+        },
+        "fix_suggestions": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticFixSuggestion"
+          },
+          "title": "Fix Suggestions",
+          "type": "array"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "result_kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Result Kind"
+        },
+        "rule_help_uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Help Uri"
+        },
+        "rule_id": {
+          "minLength": 1,
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "rule_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Name"
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Severity"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "suppressions": {
+          "items": {
+            "$ref": "#/$defs/DiagnosticSuppression"
+          },
+          "title": "Suppressions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "rule_id",
+        "message"
+      ],
+      "title": "DiagnosticEntity",
+      "type": "object"
+    },
+    "DiagnosticFixSuggestion": {
+      "additionalProperties": false,
+      "description": "Digest-bound producer fix retained explicitly as an untrusted suggestion.",
+      "properties": {
+        "artifact_change_count": {
+          "minimum": 0,
+          "title": "Artifact Change Count",
+          "type": "integer"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "replacement_count": {
+          "minimum": 0,
+          "title": "Replacement Count",
+          "type": "integer"
+        },
+        "suggestion_id": {
+          "minLength": 1,
+          "title": "Suggestion Id",
+          "type": "string"
+        },
+        "trust": {
+          "const": "untrusted_suggestion",
+          "default": "untrusted_suggestion",
+          "title": "Trust",
+          "type": "string"
+        }
+      },
+      "required": [
+        "suggestion_id",
+        "digest",
+        "artifact_change_count",
+        "replacement_count"
+      ],
+      "title": "DiagnosticFixSuggestion",
+      "type": "object"
+    },
+    "DiagnosticObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "completeness_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completeness Id"
+        },
+        "diagnostic_entity_id": {
+          "minLength": 1,
+          "title": "Diagnostic Entity Id",
+          "type": "string"
+        },
+        "limitation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitation Ids",
+          "type": "array"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "method_version": {
+          "minLength": 1,
+          "title": "Method Version",
+          "type": "string"
+        },
+        "observation_id": {
+          "minLength": 1,
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "diagnostic_observation",
+          "default": "diagnostic_observation",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "stance": {
+          "$ref": "#/$defs/ObservationStance"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "subject_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Subject Entity Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "observation_id",
+        "source_state_id",
+        "provider_run_id",
+        "method",
+        "method_version",
+        "strength",
+        "stance",
+        "rationale",
+        "diagnostic_entity_id",
+        "subject_entity_ids"
+      ],
+      "title": "DiagnosticObservation",
+      "type": "object"
+    },
+    "DiagnosticSuppression": {
+      "additionalProperties": false,
+      "description": "Producer-declared suppression state without interpreting its validity.",
+      "properties": {
+        "justification": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Justification"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Status"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "DiagnosticSuppression",
+      "type": "object"
+    },
+    "DocumentationEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Digest"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "documentation_kind": {
+          "minLength": 1,
+          "title": "Documentation Kind",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "documentation",
+          "default": "documentation",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "heading": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heading"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "documentation_kind"
+      ],
+      "title": "DocumentationEntity",
+      "type": "object"
+    },
+    "EdgeRecord": {
+      "additionalProperties": false,
+      "description": "Provider-neutral relationship target that can receive many observations.",
+      "properties": {
+        "category": {
+          "$ref": "#/$defs/RelationshipCategory"
+        },
+        "edge_id": {
+          "minLength": 1,
+          "title": "Edge Id",
+          "type": "string"
+        },
+        "predicate": {
+          "minLength": 1,
+          "title": "Predicate",
+          "type": "string"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "record_type": {
+          "const": "edge",
+          "default": "edge",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "source_entity_id": {
+          "minLength": 1,
+          "title": "Source Entity Id",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "target_entity_id": {
+          "minLength": 1,
+          "title": "Target Entity Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "edge_id",
+        "source_state_id",
+        "source_entity_id",
+        "target_entity_id",
+        "category",
+        "predicate"
+      ],
+      "title": "EdgeRecord",
+      "type": "object"
+    },
+    "EmbeddedRegionCoordinateSpace": {
+      "additionalProperties": false,
+      "description": "Coordinates in one language region projected from a host location.",
+      "properties": {
+        "host_location_id": {
+          "minLength": 1,
+          "title": "Host Location Id",
+          "type": "string"
+        },
+        "language": {
+          "minLength": 1,
+          "title": "Language",
+          "type": "string"
+        },
+        "projection": {
+          "$ref": "#/$defs/ProjectionCompleteness"
+        },
+        "region_id": {
+          "minLength": 1,
+          "title": "Region Id",
+          "type": "string"
+        },
+        "space_type": {
+          "const": "embedded_region",
+          "default": "embedded_region",
+          "title": "Space Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "region_id",
+        "language",
+        "host_location_id",
+        "projection"
+      ],
+      "title": "EmbeddedRegionCoordinateSpace",
+      "type": "object"
+    },
+    "EvidenceProducer": {
+      "additionalProperties": false,
+      "description": "Identity of the software that wrote the canonical artifact.",
+      "properties": {
+        "name": {
+          "const": "anatomize",
+          "default": "anatomize",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "title": "EvidenceProducer",
+      "type": "object"
+    },
+    "EvidenceStrength": {
+      "description": "Strength claimed by one observation, never an aggregate score.",
+      "enum": [
+        "exact",
+        "derived",
+        "conservative",
+        "heuristic",
+        "declared",
+        "unknown"
+      ],
+      "title": "EvidenceStrength",
+      "type": "string"
+    },
+    "ExternalEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_kind": {
+          "minLength": 1,
+          "title": "Entity Kind",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "external",
+          "default": "external",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "external_identity": {
+          "minLength": 1,
+          "title": "External Identity",
+          "type": "string"
+        },
+        "identity_scheme": {
+          "minLength": 1,
+          "title": "Identity Scheme",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "identity_scheme",
+        "external_identity",
+        "entity_kind"
+      ],
+      "title": "ExternalEntity",
+      "type": "object"
+    },
+    "FileCoordinateSpace": {
+      "additionalProperties": false,
+      "description": "Coordinates in the repository file named by the location.",
+      "properties": {
+        "space_type": {
+          "const": "file",
+          "default": "file",
+          "title": "Space Type",
+          "type": "string"
+        }
+      },
+      "title": "FileCoordinateSpace",
+      "type": "object"
+    },
+    "FileEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "content_class": {
+          "$ref": "#/$defs/ContentClass",
+          "default": "ordinary"
+        },
+        "digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Digest"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "file",
+          "default": "file",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "roles": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "size_bytes": {
+          "minimum": 0,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "path",
+        "size_bytes"
+      ],
+      "title": "FileEntity",
+      "type": "object"
+    },
+    "GeneratedCoordinateSpace": {
+      "additionalProperties": false,
+      "description": "Coordinates in generated output with explicit source-location provenance.",
+      "properties": {
+        "generator_identity_id": {
+          "minLength": 1,
+          "title": "Generator Identity Id",
+          "type": "string"
+        },
+        "projection": {
+          "$ref": "#/$defs/ProjectionCompleteness"
+        },
+        "source_location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Location Ids",
+          "type": "array"
+        },
+        "space_type": {
+          "const": "generated",
+          "default": "generated",
+          "title": "Space Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "generator_identity_id",
+        "projection"
+      ],
+      "title": "GeneratedCoordinateSpace",
+      "type": "object"
+    },
+    "IdentityCandidate": {
+      "additionalProperties": false,
+      "description": "One exact candidate retained with provider-specific provenance.",
+      "properties": {
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "exact": {
+          "title": "Exact",
+          "type": "boolean"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "reason_codes": {
+          "items": {
+            "$ref": "#/$defs/IdentityReason"
+          },
+          "minItems": 1,
+          "title": "Reason Codes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "entity_id",
+        "provider_run_ids",
+        "reason_codes",
+        "exact"
+      ],
+      "title": "IdentityCandidate",
+      "type": "object"
+    },
+    "IdentityReason": {
+      "description": "Portable reasons retained when reconciling identities.",
+      "enum": [
+        "declared_alias",
+        "reexport",
+        "overload",
+        "method_scope",
+        "anonymous_scope",
+        "generated_source",
+        "vendored_source",
+        "case_sensitive_path",
+        "symlink_boundary",
+        "external_package",
+        "coordinate_projection",
+        "no_candidate",
+        "multiple_candidates",
+        "provider_disagreement",
+        "state_mismatch",
+        "kind_mismatch",
+        "incomplete_scope"
+      ],
+      "title": "IdentityReason",
+      "type": "string"
+    },
+    "IdentityResolutionStatus": {
+      "description": "Outcome of reconciling provider identity claims.",
+      "enum": [
+        "exact",
+        "ambiguous",
+        "unresolved",
+        "conflicting"
+      ],
+      "title": "IdentityResolutionStatus",
+      "type": "string"
+    },
+    "LimitationRecord": {
+      "additionalProperties": false,
+      "description": "One stable statement of what a provider or method cannot establish.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "limitation_id": {
+          "minLength": 1,
+          "title": "Limitation Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Run Id"
+        },
+        "record_type": {
+          "const": "limitation",
+          "default": "limitation",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "summary": {
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "limitation_id",
+        "code",
+        "summary"
+      ],
+      "title": "LimitationRecord",
+      "type": "object"
+    },
+    "LineageCertainty": {
+      "description": "Whether cross-state continuity is established or remains a candidate.",
+      "enum": [
+        "exact",
+        "candidate"
+      ],
+      "title": "LineageCertainty",
+      "type": "string"
+    },
+    "LineageKind": {
+      "description": "Cross-state entity continuity shape.",
+      "enum": [
+        "unchanged",
+        "modified",
+        "moved",
+        "renamed",
+        "split",
+        "merged",
+        "deleted",
+        "added"
+      ],
+      "title": "LineageKind",
+      "type": "string"
+    },
+    "LineageReason": {
+      "description": "Portable reasons supporting or qualifying a lineage record.",
+      "enum": [
+        "exact_history",
+        "provider_identity",
+        "content_identity",
+        "qualified_name_match",
+        "signature_match",
+        "path_changed",
+        "name_changed",
+        "content_changed",
+        "split_candidate",
+        "merge_candidate",
+        "generated_projection",
+        "added_to_scope",
+        "removed_from_scope",
+        "ambiguous_history",
+        "provider_mismatch"
+      ],
+      "title": "LineageReason",
+      "type": "string"
+    },
+    "LineageRecord": {
+      "additionalProperties": false,
+      "description": "Cross-state continuity candidate, distinct from state-scoped identity.",
+      "properties": {
+        "certainty": {
+          "$ref": "#/$defs/LineageCertainty"
+        },
+        "kind": {
+          "$ref": "#/$defs/LineageKind"
+        },
+        "lineage_id": {
+          "minLength": 1,
+          "title": "Lineage Id",
+          "type": "string"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "observation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Observation Ids",
+          "type": "array"
+        },
+        "predecessor_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Predecessor Entity Ids",
+          "type": "array"
+        },
+        "predecessor_state_id": {
+          "minLength": 1,
+          "title": "Predecessor State Id",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "$ref": "#/$defs/LineageReason"
+          },
+          "minItems": 1,
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "record_type": {
+          "const": "lineage",
+          "default": "lineage",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "successor_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Successor Entity Ids",
+          "type": "array"
+        },
+        "successor_state_id": {
+          "minLength": 1,
+          "title": "Successor State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "lineage_id",
+        "predecessor_state_id",
+        "successor_state_id",
+        "kind",
+        "certainty",
+        "method",
+        "strength",
+        "reason_codes",
+        "rationale"
+      ],
+      "title": "LineageRecord",
+      "type": "object"
+    },
+    "LocationOrigin": {
+      "description": "Coordinate origin for a portable location.",
+      "enum": [
+        "repository",
+        "generated",
+        "external",
+        "opaque"
+      ],
+      "title": "LocationOrigin",
+      "type": "string"
+    },
+    "LocationRecord": {
+      "additionalProperties": false,
+      "description": "Portable repository, generated, external, or opaque coordinate.",
+      "properties": {
+        "coordinate_space": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "embedded_region": "#/$defs/EmbeddedRegionCoordinateSpace",
+                  "file": "#/$defs/FileCoordinateSpace",
+                  "generated": "#/$defs/GeneratedCoordinateSpace",
+                  "notebook_cell": "#/$defs/NotebookCellCoordinateSpace"
+                },
+                "propertyName": "space_type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/FileCoordinateSpace"
+                },
+                {
+                  "$ref": "#/$defs/NotebookCellCoordinateSpace"
+                },
+                {
+                  "$ref": "#/$defs/EmbeddedRegionCoordinateSpace"
+                },
+                {
+                  "$ref": "#/$defs/GeneratedCoordinateSpace"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Coordinate Space"
+        },
+        "coordinate_system": {
+          "const": "line-1-column-0-unicode",
+          "default": "line-1-column-0-unicode",
+          "title": "Coordinate System",
+          "type": "string"
+        },
+        "file_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File Id"
+        },
+        "location_id": {
+          "minLength": 1,
+          "title": "Location Id",
+          "type": "string"
+        },
+        "opaque_locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Opaque Locator"
+        },
+        "origin": {
+          "$ref": "#/$defs/LocationOrigin"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "record_type": {
+          "const": "location",
+          "default": "location",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SourceRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "location_id",
+        "source_state_id",
+        "origin"
+      ],
+      "title": "LocationRecord",
+      "type": "object"
+    },
+    "NotebookCellCoordinateSpace": {
+      "additionalProperties": false,
+      "description": "Coordinates in the decoded source of one stable notebook cell.",
+      "properties": {
+        "cell_id": {
+          "minLength": 1,
+          "title": "Cell Id",
+          "type": "string"
+        },
+        "cell_index": {
+          "minimum": 0,
+          "title": "Cell Index",
+          "type": "integer"
+        },
+        "source_digest": {
+          "minLength": 1,
+          "title": "Source Digest",
+          "type": "string"
+        },
+        "space_type": {
+          "const": "notebook_cell",
+          "default": "notebook_cell",
+          "title": "Space Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cell_id",
+        "cell_index",
+        "source_digest"
+      ],
+      "title": "NotebookCellCoordinateSpace",
+      "type": "object"
+    },
+    "ObservationStance": {
+      "description": "How an observation relates to its evidence target.",
+      "enum": [
+        "supports",
+        "qualifies",
+        "conflicts"
+      ],
+      "title": "ObservationStance",
+      "type": "string"
+    },
+    "OmissionRecord": {
+      "additionalProperties": false,
+      "description": "Material evidence absent because of scope, policy, support, or budget.",
+      "properties": {
+        "omission_id": {
+          "minLength": 1,
+          "title": "Omission Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Run Id"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "omission",
+          "default": "omission",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "recoverable": {
+          "title": "Recoverable",
+          "type": "boolean"
+        },
+        "remediation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remediation"
+        },
+        "scope_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scope Id"
+        },
+        "scope_type": {
+          "minLength": 1,
+          "title": "Scope Type",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "omission_id",
+        "source_state_id",
+        "reason",
+        "scope_type",
+        "recoverable"
+      ],
+      "title": "OmissionRecord",
+      "type": "object"
+    },
+    "ProjectionCompleteness": {
+      "description": "Exactness of a coordinate projection into another source space.",
+      "enum": [
+        "exact",
+        "partial",
+        "unavailable",
+        "unknown"
+      ],
+      "title": "ProjectionCompleteness",
+      "type": "string"
+    },
+    "ProviderArtifactRecord": {
+      "additionalProperties": false,
+      "description": "Digest-bound provider-native artifact metadata; payload remains external.",
+      "properties": {
+        "artifact_id": {
+          "minLength": 1,
+          "title": "Artifact Id",
+          "type": "string"
+        },
+        "byte_size": {
+          "minimum": 0,
+          "title": "Byte Size",
+          "type": "integer"
+        },
+        "digest": {
+          "minLength": 1,
+          "title": "Digest",
+          "type": "string"
+        },
+        "identity_verified": {
+          "default": false,
+          "title": "Identity Verified",
+          "type": "boolean"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Locator"
+        },
+        "media_type": {
+          "minLength": 1,
+          "title": "Media Type",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "provider_artifact",
+          "default": "provider_artifact",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "schema_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schema Version"
+        }
+      },
+      "required": [
+        "artifact_id",
+        "digest",
+        "media_type",
+        "byte_size"
+      ],
+      "title": "ProviderArtifactRecord",
+      "type": "object"
+    },
+    "ProviderRunRecord": {
+      "additionalProperties": false,
+      "description": "Identity, method and outcome of one provider attempt over one state.",
+      "properties": {
+        "artifact_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Artifact Ids",
+          "type": "array"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "configuration_digest": {
+          "minLength": 1,
+          "title": "Configuration Digest",
+          "type": "string"
+        },
+        "limitation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitation Ids",
+          "type": "array"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "provider_id": {
+          "minLength": 1,
+          "title": "Provider Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "provider_version": {
+          "minLength": 1,
+          "title": "Provider Version",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "provider_run",
+          "default": "provider_run",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/ProviderRunStatus"
+        }
+      },
+      "required": [
+        "provider_run_id",
+        "provider_id",
+        "provider_version",
+        "source_state_id",
+        "configuration_digest",
+        "method",
+        "status"
+      ],
+      "title": "ProviderRunRecord",
+      "type": "object"
+    },
+    "ProviderRunStatus": {
+      "description": "Terminal state of one provider attempt.",
+      "enum": [
+        "complete",
+        "partial",
+        "unavailable",
+        "failed",
+        "cancelled"
+      ],
+      "title": "ProviderRunStatus",
+      "type": "string"
+    },
+    "RangeEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "range",
+          "default": "range",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "parent_entity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Entity Id"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "range_kind": {
+          "minLength": 1,
+          "title": "Range Kind",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "range_kind"
+      ],
+      "title": "RangeEntity",
+      "type": "object"
+    },
+    "RelationshipCategory": {
+      "description": "Broad semantic family for an extensible exact predicate.",
+      "enum": [
+        "structure",
+        "dependency",
+        "call",
+        "reference",
+        "implementation",
+        "override",
+        "test",
+        "documentation",
+        "configuration",
+        "data",
+        "workflow",
+        "artifact",
+        "provenance",
+        "generated",
+        "declaration"
+      ],
+      "title": "RelationshipCategory",
+      "type": "string"
+    },
+    "RepositoryEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "repository",
+          "default": "repository",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "root_name": {
+          "minLength": 1,
+          "title": "Root Name",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "repository_id",
+        "root_name"
+      ],
+      "title": "RepositoryEntity",
+      "type": "object"
+    },
+    "RuntimeEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "runtime",
+          "default": "runtime",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "run_identity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Identity"
+        },
+        "runtime_kind": {
+          "minLength": 1,
+          "title": "Runtime Kind",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "status": {
+          "minLength": 1,
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "runtime_kind",
+        "status"
+      ],
+      "title": "RuntimeEntity",
+      "type": "object"
+    },
+    "RuntimeObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "completeness_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completeness Id"
+        },
+        "limitation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitation Ids",
+          "type": "array"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "method_version": {
+          "minLength": 1,
+          "title": "Method Version",
+          "type": "string"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "observation_id": {
+          "minLength": 1,
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "outcome": {
+          "minLength": 1,
+          "title": "Outcome",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "runtime_observation",
+          "default": "runtime_observation",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "runtime_entity_id": {
+          "minLength": 1,
+          "title": "Runtime Entity Id",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "stance": {
+          "$ref": "#/$defs/ObservationStance"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "subject_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Subject Entity Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "observation_id",
+        "source_state_id",
+        "provider_run_id",
+        "method",
+        "method_version",
+        "strength",
+        "stance",
+        "rationale",
+        "runtime_entity_id",
+        "subject_entity_ids",
+        "outcome"
+      ],
+      "title": "RuntimeObservation",
+      "type": "object"
+    },
+    "SimilarityEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "similarity",
+          "default": "similarity",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "member_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Member Entity Ids",
+          "type": "array"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "normalization": {
+          "minLength": 1,
+          "title": "Normalization",
+          "type": "string"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "method",
+        "normalization",
+        "member_entity_ids"
+      ],
+      "title": "SimilarityEntity",
+      "type": "object"
+    },
+    "SimilarityObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "completeness_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completeness Id"
+        },
+        "limitation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitation Ids",
+          "type": "array"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "member_entity_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Member Entity Ids",
+          "type": "array"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "method_version": {
+          "minLength": 1,
+          "title": "Method Version",
+          "type": "string"
+        },
+        "observation_id": {
+          "minLength": 1,
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "similarity_observation",
+          "default": "similarity_observation",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "score": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Score"
+        },
+        "similarity_entity_id": {
+          "minLength": 1,
+          "title": "Similarity Entity Id",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "stance": {
+          "$ref": "#/$defs/ObservationStance"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        }
+      },
+      "required": [
+        "observation_id",
+        "source_state_id",
+        "provider_run_id",
+        "method",
+        "method_version",
+        "strength",
+        "stance",
+        "rationale",
+        "similarity_entity_id",
+        "member_entity_ids"
+      ],
+      "title": "SimilarityObservation",
+      "type": "object"
+    },
+    "SourcePosition": {
+      "additionalProperties": false,
+      "description": "One one-based line and zero-based Unicode-codepoint column.",
+      "properties": {
+        "column": {
+          "minimum": 0,
+          "title": "Column",
+          "type": "integer"
+        },
+        "line": {
+          "minimum": 1,
+          "title": "Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "line",
+        "column"
+      ],
+      "title": "SourcePosition",
+      "type": "object"
+    },
+    "SourceRange": {
+      "additionalProperties": false,
+      "description": "Half-open source range.",
+      "properties": {
+        "end": {
+          "$ref": "#/$defs/SourcePosition"
+        },
+        "start": {
+          "$ref": "#/$defs/SourcePosition"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "SourceRange",
+      "type": "object"
+    },
+    "SourceStateRecord": {
+      "additionalProperties": false,
+      "description": "Portable identity of one repository source state.",
+      "properties": {
+        "content_digest": {
+          "minLength": 1,
+          "title": "Content Digest",
+          "type": "string"
+        },
+        "dirty": {
+          "title": "Dirty",
+          "type": "boolean"
+        },
+        "file_count": {
+          "minimum": 0,
+          "title": "File Count",
+          "type": "integer"
+        },
+        "record_type": {
+          "const": "source_state",
+          "default": "source_state",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "state_id": {
+          "minLength": 1,
+          "title": "State Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "state_id",
+        "repository_id",
+        "dirty",
+        "content_digest",
+        "file_count"
+      ],
+      "title": "SourceStateRecord",
+      "type": "object"
+    },
+    "StructuralObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "completeness_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Completeness Id"
+        },
+        "limitation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitation Ids",
+          "type": "array"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "method": {
+          "minLength": 1,
+          "title": "Method",
+          "type": "string"
+        },
+        "method_version": {
+          "minLength": 1,
+          "title": "Method Version",
+          "type": "string"
+        },
+        "observation_id": {
+          "minLength": 1,
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "minLength": 1,
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "rationale": {
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "record_type": {
+          "const": "structural_observation",
+          "default": "structural_observation",
+          "title": "Record Type",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "stance": {
+          "$ref": "#/$defs/ObservationStance"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "target_id": {
+          "minLength": 1,
+          "title": "Target Id",
+          "type": "string"
+        },
+        "target_type": {
+          "enum": [
+            "entity",
+            "edge",
+            "contract"
+          ],
+          "title": "Target Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observation_id",
+        "source_state_id",
+        "provider_run_id",
+        "method",
+        "method_version",
+        "strength",
+        "stance",
+        "rationale",
+        "target_type",
+        "target_id"
+      ],
+      "title": "StructuralObservation",
+      "type": "object"
+    },
+    "SymbolEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "digest": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Digest"
+        },
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "symbol",
+          "default": "symbol",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "language": {
+          "minLength": 1,
+          "title": "Language",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "public": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Public"
+        },
+        "qualified_name": {
+          "minLength": 1,
+          "title": "Qualified Name",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "symbol_kind": {
+          "minLength": 1,
+          "title": "Symbol Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "language",
+        "symbol_kind",
+        "name",
+        "qualified_name"
+      ],
+      "title": "SymbolEntity",
+      "type": "object"
+    },
+    "TestEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "test",
+          "default": "test",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "framework": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Framework"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "test_kind": {
+          "minLength": 1,
+          "title": "Test Kind",
+          "type": "string"
+        },
+        "test_name": {
+          "minLength": 1,
+          "title": "Test Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "test_kind",
+        "test_name"
+      ],
+      "title": "TestEntity",
+      "type": "object"
+    },
+    "WorkflowEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "display_name": {
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "entity_id": {
+          "minLength": 1,
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "entity_type": {
+          "const": "workflow",
+          "default": "workflow",
+          "title": "Entity Type",
+          "type": "string"
+        },
+        "location_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Location Ids",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "rule_name": {
+          "minLength": 1,
+          "title": "Rule Name",
+          "type": "string"
+        },
+        "source_state_id": {
+          "minLength": 1,
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "workflow_kind": {
+          "minLength": 1,
+          "title": "Workflow Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_state_id",
+        "display_name",
+        "workflow_kind",
+        "rule_name"
+      ],
+      "title": "WorkflowEntity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The sole canonical portable repository-evidence aggregate.",
+  "properties": {
+    "aliases": {
+      "items": {
+        "$ref": "#/$defs/AliasRecord"
+      },
+      "title": "Aliases",
+      "type": "array"
+    },
+    "artifact_type": {
+      "const": "anatomize.evidence",
+      "default": "anatomize.evidence",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "candidates": {
+      "items": {
+        "$ref": "#/$defs/CandidateRecord"
+      },
+      "title": "Candidates",
+      "type": "array"
+    },
+    "completeness": {
+      "items": {
+        "$ref": "#/$defs/CompletenessRecord"
+      },
+      "title": "Completeness",
+      "type": "array"
+    },
+    "conflicts": {
+      "items": {
+        "$ref": "#/$defs/ConflictRecord"
+      },
+      "title": "Conflicts",
+      "type": "array"
+    },
+    "contracts": {
+      "items": {
+        "$ref": "#/$defs/ContractRecord"
+      },
+      "title": "Contracts",
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/EdgeRecord"
+      },
+      "title": "Edges",
+      "type": "array"
+    },
+    "entities": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "artifact": "#/$defs/ArtifactEntity",
+            "configuration": "#/$defs/ConfigurationEntity",
+            "data": "#/$defs/DataEntity",
+            "dependency": "#/$defs/DependencyEntity",
+            "diagnostic": "#/$defs/DiagnosticEntity",
+            "documentation": "#/$defs/DocumentationEntity",
+            "external": "#/$defs/ExternalEntity",
+            "file": "#/$defs/FileEntity",
+            "range": "#/$defs/RangeEntity",
+            "repository": "#/$defs/RepositoryEntity",
+            "runtime": "#/$defs/RuntimeEntity",
+            "similarity": "#/$defs/SimilarityEntity",
+            "symbol": "#/$defs/SymbolEntity",
+            "test": "#/$defs/TestEntity",
+            "workflow": "#/$defs/WorkflowEntity"
+          },
+          "propertyName": "entity_type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/RepositoryEntity"
+          },
+          {
+            "$ref": "#/$defs/FileEntity"
+          },
+          {
+            "$ref": "#/$defs/RangeEntity"
+          },
+          {
+            "$ref": "#/$defs/SymbolEntity"
+          },
+          {
+            "$ref": "#/$defs/DocumentationEntity"
+          },
+          {
+            "$ref": "#/$defs/ConfigurationEntity"
+          },
+          {
+            "$ref": "#/$defs/TestEntity"
+          },
+          {
+            "$ref": "#/$defs/DataEntity"
+          },
+          {
+            "$ref": "#/$defs/WorkflowEntity"
+          },
+          {
+            "$ref": "#/$defs/ArtifactEntity"
+          },
+          {
+            "$ref": "#/$defs/DependencyEntity"
+          },
+          {
+            "$ref": "#/$defs/DiagnosticEntity"
+          },
+          {
+            "$ref": "#/$defs/RuntimeEntity"
+          },
+          {
+            "$ref": "#/$defs/SimilarityEntity"
+          },
+          {
+            "$ref": "#/$defs/ExternalEntity"
+          }
+        ]
+      },
+      "title": "Entities",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "$ref": "#/$defs/LimitationRecord"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "lineage": {
+      "items": {
+        "$ref": "#/$defs/LineageRecord"
+      },
+      "title": "Lineage",
+      "type": "array"
+    },
+    "locations": {
+      "items": {
+        "$ref": "#/$defs/LocationRecord"
+      },
+      "title": "Locations",
+      "type": "array"
+    },
+    "observations": {
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "diagnostic_observation": "#/$defs/DiagnosticObservation",
+            "runtime_observation": "#/$defs/RuntimeObservation",
+            "similarity_observation": "#/$defs/SimilarityObservation",
+            "structural_observation": "#/$defs/StructuralObservation"
+          },
+          "propertyName": "record_type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/StructuralObservation"
+          },
+          {
+            "$ref": "#/$defs/DiagnosticObservation"
+          },
+          {
+            "$ref": "#/$defs/RuntimeObservation"
+          },
+          {
+            "$ref": "#/$defs/SimilarityObservation"
+          }
+        ]
+      },
+      "title": "Observations",
+      "type": "array"
+    },
+    "omissions": {
+      "items": {
+        "$ref": "#/$defs/OmissionRecord"
+      },
+      "title": "Omissions",
+      "type": "array"
+    },
+    "producer": {
+      "$ref": "#/$defs/EvidenceProducer"
+    },
+    "provider_artifacts": {
+      "items": {
+        "$ref": "#/$defs/ProviderArtifactRecord"
+      },
+      "title": "Provider Artifacts",
+      "type": "array"
+    },
+    "provider_runs": {
+      "items": {
+        "$ref": "#/$defs/ProviderRunRecord"
+      },
+      "title": "Provider Runs",
+      "type": "array"
+    },
+    "repository_id": {
+      "minLength": 1,
+      "title": "Repository Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "states": {
+      "items": {
+        "$ref": "#/$defs/SourceStateRecord"
+      },
+      "minItems": 1,
+      "title": "States",
+      "type": "array"
+    }
+  },
+  "required": [
+    "producer",
+    "repository_id",
+    "states"
+  ],
+  "title": "RepositoryEvidence",
+  "type": "object"
+}

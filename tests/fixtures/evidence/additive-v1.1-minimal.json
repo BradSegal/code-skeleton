@@ -1,0 +1,5 @@
+{
+  "artifact_type": "anatomize.evidence",
+  "schema_version": "1.1.0",
+  "new_optional_field": true
+}

@@ -1,0 +1,19 @@
+{
+  "workflow_id": "trial-analysis-boundaries",
+  "dynamic_dag": true,
+  "rules": [
+    {
+      "name": "restricted_sensitivity",
+      "dynamic": true,
+      "input": [
+        {"locator": "data/patients.csv", "availability": "ignored", "content_class": "sensitive", "schema_identity": "schema:patients-v1"},
+        {"locator": "s3://example.invalid/external.parquet", "availability": "remote", "content_class": "external"},
+        {"locator": "data/vendor-archive.zip", "availability": "opaque", "content_class": "opaque", "media_type": "application/zip"}
+      ],
+      "output": [
+        {"locator": "reports/stale.html", "availability": "missing", "content_class": "generated", "stale": true}
+      ],
+      "depends_on": ["runtime_scatter"]
+    }
+  ]
+}

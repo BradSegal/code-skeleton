@@ -1,0 +1,86 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {"driver": {"name": "Ruff", "semanticVersion": "0.12.0", "rules": [{"id": "F401", "name": "unused-import", "helpUri": "https://docs.astral.sh/ruff/rules/unused-import", "shortDescription": {"text": "Unused import"}, "defaultConfiguration": {"level": "warning"}}]}},
+      "invocations": [{"executionSuccessful": true, "exitCode": 1, "exitCodeDescription": "Findings emitted", "commandLine": "ruff check --output-format sarif"}],
+      "artifacts": [{"location": {"uri": "src/app.py", "index": 0}, "sourceLanguage": "python", "roles": ["analysisTarget"]}],
+      "columnKind": "unicodeCodePoints",
+      "versionControlProvenance": [{"repositoryUri": "https://example.invalid/repository", "revisionId": "abc123"}],
+      "results": [
+        {
+          "ruleId": "F401",
+          "ruleIndex": 0,
+          "level": "warning",
+          "kind": "fail",
+          "baselineState": "new",
+          "message": {"text": "Imported name is unused."},
+          "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/app.py", "index": 0}, "region": {"startLine": 1, "startColumn": 5, "endLine": 1, "endColumn": 11}}, "logicalLocations": [{"fullyQualifiedName": "app.unused", "kind": "function"}]}],
+          "fingerprints": {"ruff/v1": "finding-f401"},
+          "fixes": [{"description": {"text": "Remove the unused name."}, "artifactChanges": [{"artifactLocation": {"uri": "src/app.py"}, "replacements": [{"deletedRegion": {"startLine": 1, "startColumn": 5, "endColumn": 11}, "insertedContent": {"text": ""}}]}]}]
+        },
+        {
+          "ruleId": "F401",
+          "ruleIndex": 0,
+          "level": "warning",
+          "kind": "fail",
+          "baselineState": "new",
+          "message": {"text": "Imported name is unused."},
+          "locations": [{"physicalLocation": {"artifactLocation": {"uri": "src/app.py", "index": 0}, "region": {"startLine": 1, "startColumn": 5, "endLine": 1, "endColumn": 11}}, "logicalLocations": [{"fullyQualifiedName": "app.unused", "kind": "function"}]}],
+          "fingerprints": {"ruff/v1": "finding-f401"},
+          "fixes": [{"description": {"text": "Remove the unused name."}, "artifactChanges": [{"artifactLocation": {"uri": "src/app.py"}, "replacements": [{"deletedRegion": {"startLine": 1, "startColumn": 5, "endColumn": 11}, "insertedContent": {"text": ""}}]}]}]
+        }
+      ]
+    },
+    {
+      "tool": {"driver": {"name": "lintr", "version": "3.2.0", "rules": [{"id": "object_usage_linter"}]}},
+      "invocations": [{"executionSuccessful": true}],
+      "artifacts": [{"location": {"uri": "R/analysis.R", "index": 0}, "sourceLanguage": "r"}],
+      "columnKind": "unicodeCodePoints",
+      "results": [{"ruleId": "object_usage_linter", "level": "note", "message": {"text": "Object may be undefined."}, "locations": [{"physicalLocation": {"artifactLocation": {"index": 0}, "region": {"startLine": 1, "startColumn": 16, "endColumn": 22}}}]}]
+    },
+    {
+      "tool": {"driver": {"name": "Semgrep", "semanticVersion": "1.130.0", "rules": [{"id": "python.lang.security.audit.dangerous-call"}]}},
+      "invocations": [{"executionSuccessful": true}],
+      "artifacts": [{"location": {"uri": "src/app.py", "index": 0}, "sourceLanguage": "python"}],
+      "columnKind": "utf16CodeUnits",
+      "results": [{"ruleId": "python.lang.security.audit.dangerous-call", "level": "error", "kind": "fail", "message": {"text": "Dangerous call requires review."}, "locations": [{"physicalLocation": {"artifactLocation": {"index": 0}, "region": {"startLine": 3, "startColumn": 12, "endColumn": 21}}}], "suppressions": [{"kind": "inSource", "status": "accepted", "justification": "Reviewed test fixture."}], "partialFingerprints": {"semgrep/v1": "dangerous-call"}}]
+    },
+    {
+      "tool": {"driver": {"name": "CodeQL", "semanticVersion": "2.20.0", "rules": [{"id": "py/dangerous-call"}]}},
+      "invocations": [{"executionSuccessful": true}],
+      "artifacts": [{"location": {"uri": "src/app.py", "index": 0}, "sourceLanguage": "python"}],
+      "columnKind": "unicodeCodePoints",
+      "results": [{"ruleId": "py/dangerous-call", "level": "warning", "message": {"text": "Call may cross a trust boundary."}, "locations": [{"physicalLocation": {"artifactLocation": {"index": 0}, "region": {"startLine": 3, "startColumn": 12, "endColumn": 21}}}]}]
+    },
+    {
+      "tool": {"driver": {"name": "Gitleaks", "version": "8.24.0", "rules": [{"id": "generic-secret"}]}},
+      "invocations": [{"executionSuccessful": true}],
+      "artifacts": [{"location": {"uri": "src/app.py", "index": 0}, "sourceLanguage": "python"}],
+      "columnKind": "unicodeCodePoints",
+      "results": [{"ruleId": "generic-secret", "level": "error", "message": {"text": "Potential credential material."}, "locations": [{"physicalLocation": {"artifactLocation": {"index": 0}, "region": {"startLine": 2, "startColumn": 5, "endColumn": 13}}}]}]
+    },
+    {
+      "tool": {"driver": {"name": "dependency-audit", "version": "2.0.0", "rules": [{"id": "DEP001"}]}},
+      "invocations": [{"executionSuccessful": true}],
+      "artifacts": [{"location": {"uri": "pyproject.toml", "index": 0}, "sourceLanguage": "toml"}],
+      "columnKind": "unicodeCodePoints",
+      "results": [{"ruleId": "DEP001", "level": "warning", "message": {"text": "Declared dependency is unused."}, "locations": [{"physicalLocation": {"artifactLocation": {"index": 0}, "region": {"startLine": 2, "startColumn": 1, "endColumn": 13}}}]}]
+    },
+    {
+      "tool": {"driver": {"name": "deadcode-scan", "version": "1.0.0", "rules": [{"id": "DEAD001"}]}},
+      "invocations": [{"executionSuccessful": true}],
+      "artifacts": [{"location": {"uri": "src/app.py", "index": 0}, "sourceLanguage": "python"}],
+      "columnKind": "unicodeCodePoints",
+      "results": [{"ruleId": "DEAD001", "level": "note", "message": {"text": "Function appears unused."}, "locations": [{"physicalLocation": {"artifactLocation": {"index": 0}, "region": {"startLine": 1, "startColumn": 5, "endColumn": 11}}, "logicalLocations": [{"fullyQualifiedName": "app.unused"}]}]}]
+    },
+    {
+      "tool": {"driver": {"name": "Import Linter", "version": "2.3.0", "rules": [{"id": "ILC001", "name": "forbidden-import"}]}},
+      "invocations": [{"executionSuccessful": true}],
+      "artifacts": [{"location": {"uri": "src/architecture.py", "index": 0}, "sourceLanguage": "python"}],
+      "columnKind": "unicodeCodePoints",
+      "results": [{"ruleId": "ILC001", "level": "error", "kind": "fail", "message": {"text": "Forbidden import contract was violated."}, "locations": [{"physicalLocation": {"artifactLocation": {"index": 0}, "region": {"startLine": 1, "startColumn": 1, "endColumn": 26}}}]}]
+    }
+  ]
+}

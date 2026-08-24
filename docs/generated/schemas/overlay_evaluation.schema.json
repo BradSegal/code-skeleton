@@ -1,0 +1,63 @@
+{
+  "$defs": {
+    "OverlayStaleReason": {
+      "enum": [
+        "source_state_changed",
+        "candidate_or_member_evidence_changed",
+        "provider_set_or_artifact_changed",
+        "referenced_evidence_changed",
+        "decision_schema_changed",
+        "decision_policy_changed"
+      ],
+      "title": "OverlayStaleReason",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "anatomize.overlay-evaluation",
+      "default": "anatomize.overlay-evaluation",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "current": {
+      "title": "Current",
+      "type": "boolean"
+    },
+    "decision_id": {
+      "title": "Decision Id",
+      "type": "string"
+    },
+    "evaluation_id": {
+      "title": "Evaluation Id",
+      "type": "string"
+    },
+    "explanation": {
+      "title": "Explanation",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "stale_reasons": {
+      "items": {
+        "$ref": "#/$defs/OverlayStaleReason"
+      },
+      "title": "Stale Reasons",
+      "type": "array"
+    }
+  },
+  "required": [
+    "evaluation_id",
+    "decision_id",
+    "current",
+    "stale_reasons",
+    "explanation"
+  ],
+  "title": "OverlayEvaluation",
+  "type": "object"
+}

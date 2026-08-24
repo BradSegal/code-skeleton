@@ -1,0 +1,33 @@
+{
+  "workflow_id": "trial-analysis",
+  "rules": [
+    {
+      "name": "preprocess",
+      "script": "scripts/preprocess.py",
+      "input": [
+        {"locator": "data/public.csv", "media_type": "text/csv", "size_bytes": 38, "content_class": "ordinary"}
+      ],
+      "output": [
+        {"locator": "derived/cohort.parquet", "media_type": "application/vnd.apache.parquet", "content_class": "generated"}
+      ],
+      "params": {"cohort": "eligible"},
+      "resources": {"mem_mb": 512, "threads": 1},
+      "environment": {"kind": "conda", "name": "analysis", "locator": "environment.yml"}
+    },
+    {
+      "name": "estimate",
+      "script": "analysis/run_analysis.R",
+      "input": [{"locator": "derived/cohort.parquet", "content_class": "generated"}],
+      "output": [{"locator": "derived/effect.rds", "media_type": "application/x-r-rds", "content_class": "generated"}],
+      "depends_on": ["preprocess"],
+      "environment": {"kind": "renv", "name": "r-analysis", "locator": "renv.lock"}
+    },
+    {
+      "name": "report",
+      "script": "analysis.qmd",
+      "input": [{"locator": "derived/effect.rds", "content_class": "generated"}],
+      "report": [{"locator": "reports/result.html", "media_type": "text/html", "content_class": "generated"}],
+      "depends_on": ["estimate"]
+    }
+  ]
+}

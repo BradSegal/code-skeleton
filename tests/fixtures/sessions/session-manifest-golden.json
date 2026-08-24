@@ -1,0 +1,176 @@
+{
+  "artifact_type": "anatomize.session",
+  "artifacts": [
+    {
+      "artifact_id": "session-artifact:sha256:c619d78582609bf7502172f9f97d0a4ee5e2a41e0e502b325313ffcba5cba471",
+      "derived_from_ids": [],
+      "deterministic": true,
+      "digest": "sha256:24d6cab03a770f177c4ed15ff680ce4bb2e2294ec7be28d43d838f1a38e2cd03",
+      "generated_at": null,
+      "media_type": "application/json",
+      "portable_path": "raw/a.json",
+      "provider_artifact_id": "provider-artifact:a",
+      "provider_run_id": "provider-run:a",
+      "role": "raw_provider",
+      "source_state_ids": ["state:a"]
+    },
+    {
+      "artifact_id": "session-artifact:sha256:55900901fc8bc9b22fb3c2e1a275d817a49647328aad0b2452e51654c3a45429",
+      "derived_from_ids": [
+        "session-artifact:sha256:c619d78582609bf7502172f9f97d0a4ee5e2a41e0e502b325313ffcba5cba471"
+      ],
+      "deterministic": true,
+      "digest": "sha256:519ad55adc0081bdcaa1cc47f7d7d5a4a27caaf0f5fdc6a6dd463306db19aae8",
+      "generated_at": null,
+      "media_type": "application/vnd.anatomize.evidence+json",
+      "portable_path": "normalized/evidence.json",
+      "provider_artifact_id": null,
+      "provider_run_id": null,
+      "role": "normalized_evidence",
+      "source_state_ids": ["state:a"]
+    },
+    {
+      "artifact_id": "session-artifact:sha256:97b0f93923744f4d15d4acd8f543f2d6fbe32ac1751c69641d837f71286e521c",
+      "derived_from_ids": [
+        "session-artifact:sha256:55900901fc8bc9b22fb3c2e1a275d817a49647328aad0b2452e51654c3a45429"
+      ],
+      "deterministic": true,
+      "digest": "sha256:228adf7ff948c41c5bda4f57cf2ad41e7232b736f672696bb195c08d9baf9203",
+      "generated_at": null,
+      "media_type": "application/vnd.anatomize.index+json",
+      "portable_path": "normalized/index.json",
+      "provider_artifact_id": null,
+      "provider_run_id": null,
+      "role": "normalized_index",
+      "source_state_ids": ["state:a"]
+    },
+    {
+      "artifact_id": "session-artifact:sha256:968850cc86a845891ebdbf10b2293d97b27675b809eb6daa1728e9393b2b2e8e",
+      "derived_from_ids": [
+        "session-artifact:sha256:97b0f93923744f4d15d4acd8f543f2d6fbe32ac1751c69641d837f71286e521c"
+      ],
+      "deterministic": true,
+      "digest": "sha256:209aa8acce67dbc02eeb37eb30897f9e717db9206ee5fb6d624eab4c0b85a4cb",
+      "generated_at": null,
+      "media_type": "text/markdown",
+      "portable_path": "reports/review.md",
+      "provider_artifact_id": null,
+      "provider_run_id": null,
+      "role": "report",
+      "source_state_ids": ["state:a"]
+    },
+    {
+      "artifact_id": "session-artifact:sha256:c727fdc5d88db5c1c4a984b1b3171e4d4a45f07b6ea19342aa15cccb662f0bb3",
+      "derived_from_ids": [
+        "session-artifact:sha256:968850cc86a845891ebdbf10b2293d97b27675b809eb6daa1728e9393b2b2e8e"
+      ],
+      "deterministic": true,
+      "digest": "sha256:0849f87246632489a9e43c19a2b68042af01786a30563dda865b909d8d77904a",
+      "generated_at": null,
+      "media_type": "text/x-python",
+      "portable_path": "slices/src/pkg/core.py",
+      "provider_artifact_id": null,
+      "provider_run_id": null,
+      "role": "source_slice",
+      "source_state_ids": ["state:a"]
+    }
+  ],
+  "budgets": [
+    {"limit": 8000, "name": "tokens", "unit": "tokens", "used": 2100},
+    {"limit": 20, "name": "files", "unit": "files", "used": 3}
+  ],
+  "configuration_digest": "sha256:b7d64a9221007dfd5390f7df6cd5b8f3ea4f82faa1237141e35ebf161f5511a1",
+  "deterministic": true,
+  "omissions": [
+    {
+      "code": "runtime_not_requested",
+      "omission_id": "session-omission:sha256:2a371c0f5575ce8aa79a3772dff4e566ba4c6f0d7db839e87509914f9ec50086",
+      "provider_id": "provider.runtime",
+      "rationale": "Runtime evidence was outside this static review session.",
+      "scope": "provider"
+    }
+  ],
+  "policy_digest": "sha256:823412d1eacb67956220e532959f0104603057c88704863ca38e7cd188fda812",
+  "providers": [
+    {
+      "configuration_digest": "sha256:e6add8748d635b1256428ad5bf02d8b71dd89690701676d191a9202f94607564",
+      "provider_id": "provider.python",
+      "provider_run_id": "provider-run:a",
+      "provider_version": "1.0.0",
+      "raw_artifact_ids": [
+        "session-artifact:sha256:c619d78582609bf7502172f9f97d0a4ee5e2a41e0e502b325313ffcba5cba471"
+      ],
+      "status": "complete"
+    }
+  ],
+  "query": {
+    "operation": "review",
+    "parameters": {"depth": 2, "focus": "src/pkg/core.py"},
+    "query_id": "query:sha256:13b8500d456df03d4e4fb2dd0d6eb93775acdcecece4591c9b18244b7be40345"
+  },
+  "recorded_at": null,
+  "repository_id": "repository:sessions",
+  "schema_version": "1.0.0",
+  "schemas": [
+    {
+      "artifact_type": "anatomize.session",
+      "schema_digest": "sha256:bec63dd4cd52a4dfe1346e87317165e489bc28b08ccde8b0523dc7c6278eb826",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_type": "anatomize.evidence",
+      "schema_digest": "sha256:a658998fd5db71044eb87d56a6f0044ad38f9fecb878c375727b239e842a1067",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_type": "anatomize.state-manifest",
+      "schema_digest": "sha256:dc7e110390277417d04a795dc22eafa475744ed330e18cedcdcc87576eebd1ad",
+      "schema_version": "1.0.0"
+    },
+    {
+      "artifact_type": "anatomize.repository-index",
+      "schema_digest": "sha256:9206f13cf0466992624707f85ee41923a30024e2c73117ef7b3bf2896c64292d",
+      "schema_version": "2.0.0"
+    }
+  ],
+  "session_id": "session:sha256:51bdce07e190efb43616d50e7d92a51bbd9ef03bdb996e1530b54c00e7d73b54",
+  "source_states": [
+    {
+      "artifact_type": "anatomize.state-manifest",
+      "baseline_available": true,
+      "configuration_digest": "sha256:b7d64a9221007dfd5390f7df6cd5b8f3ea4f82faa1237141e35ebf161f5511a1",
+      "evidence_artifact_digest": "sha256:519ad55adc0081bdcaa1cc47f7d7d5a4a27caaf0f5fdc6a6dd463306db19aae8",
+      "evidence_schema_version": "1.0.0",
+      "generated_entity_ids": [],
+      "history_status": "complete",
+      "provider_states": [
+        {
+          "artifacts": [
+            {
+              "artifact_id": "provider-artifact:a",
+              "digest": "sha256:24d6cab03a770f177c4ed15ff680ce4bb2e2294ec7be28d43d838f1a38e2cd03"
+            }
+          ],
+          "capabilities": ["entities", "relationships"],
+          "configuration_digest": "sha256:e6add8748d635b1256428ad5bf02d8b71dd89690701676d191a9202f94607564",
+          "provider_id": "provider.python",
+          "provider_run_id": "provider-run:a",
+          "provider_version": "1.0.0",
+          "status": "complete"
+        }
+      ],
+      "repository_id": "repository:sessions",
+      "schema_version": "1.0.0",
+      "source_state": {
+        "content_digest": "sha256:89e76422e2e75eccc1d14ec898018d1242417c03f9d5fe3be7038ce82dec2e8c",
+        "dirty": false,
+        "file_count": 3,
+        "record_type": "source_state",
+        "repository_id": "repository:sessions",
+        "revision": "a",
+        "state_id": "state:a"
+      }
+    }
+  ],
+  "status": "complete"
+}

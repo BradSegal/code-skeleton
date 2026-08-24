@@ -1,0 +1,48 @@
+{
+  "additionalProperties": false,
+  "description": "Machine-readable successful artifact validation result.",
+  "properties": {
+    "artifact_type": {
+      "const": "anatomize.artifact-check",
+      "default": "anatomize.artifact-check",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "checked_artifact_type": {
+      "title": "Checked Artifact Type",
+      "type": "string"
+    },
+    "checked_schema_version": {
+      "title": "Checked Schema Version",
+      "type": "string"
+    },
+    "identity": {
+      "title": "Identity",
+      "type": "string"
+    },
+    "message": {
+      "default": "Artifact is valid and internally consistent.",
+      "title": "Message",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "valid": {
+      "const": true,
+      "default": true,
+      "title": "Valid",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "checked_artifact_type",
+    "checked_schema_version",
+    "identity"
+  ],
+  "title": "ArtifactCheck",
+  "type": "object"
+}

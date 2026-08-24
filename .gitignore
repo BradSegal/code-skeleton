@@ -8,7 +8,10 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.playwright-cli/
+.hypothesis/
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
 
@@ -18,8 +21,14 @@ build/
 
 .anatomy/
 .anatomy-*/
+/.anatomize.yaml
 .runtime/
 .runtime-*/
+repomix/
+/tickets/
+/site/
+/output/
+/site-verification.json
 
 .DS_Store
 Thumbs.db

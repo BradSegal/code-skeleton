@@ -1,0 +1,21 @@
+---
+title: Trial result
+params:
+  cohort: eligible
+---
+
+# Analysis
+
+The report consumes the generated cohort and effect estimate.
+
+```{python normalise-labels}
+#| parameters: true
+from trialtools import normalise_group
+label = normalise_group("Treatment A")
+```
+
+```{r estimate-effect}
+#| echo: false
+effect <- readRDS("derived/effect.rds")
+effect
+```

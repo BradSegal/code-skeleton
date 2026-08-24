@@ -1,0 +1,6 @@
+name: trial-analysis
+channels: [conda-forge]
+dependencies:
+  - python=3.12
+  - r-base=4.5
+  - pandas=2.3.1

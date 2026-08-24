@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0.0",
+  "repository_id": "repository:temporal",
+  "configuration_digest": "sha256:configuration",
+  "states": {
+    "before": {
+      "state_id": "state:before",
+      "revision": "1111111",
+      "dirty": false,
+      "content_digest": "sha256:before",
+      "file_count": 20
+    },
+    "after": {
+      "state_id": "state:after",
+      "revision": "2222222",
+      "dirty": false,
+      "content_digest": "sha256:after",
+      "file_count": 21
+    }
+  },
+  "provider": {
+    "provider_id": "provider.builtin",
+    "provider_version": "1.0.0",
+    "configuration_digest": "sha256:provider-configuration",
+    "capabilities": ["entities", "relationships", "contracts"]
+  },
+  "lineage_cases": [
+    {"kind": "unchanged", "certainty": "exact", "before_count": 1, "after_count": 1},
+    {"kind": "modified", "certainty": "candidate", "before_count": 1, "after_count": 1},
+    {"kind": "moved", "certainty": "exact", "before_count": 1, "after_count": 1},
+    {"kind": "renamed", "certainty": "candidate", "before_count": 1, "after_count": 1},
+    {"kind": "split", "certainty": "candidate", "before_count": 1, "after_count": 2},
+    {"kind": "merged", "certainty": "candidate", "before_count": 2, "after_count": 1},
+    {"kind": "added", "certainty": "exact", "before_count": 0, "after_count": 1},
+    {"kind": "deleted", "certainty": "exact", "before_count": 1, "after_count": 0}
+  ],
+  "delta_families": [
+    "relationship",
+    "api",
+    "diagnostic",
+    "duplicate",
+    "test",
+    "documentation",
+    "workflow",
+    "data",
+    "environment",
+    "artifact"
+  ],
+  "boundary_codes": [
+    "absent_baseline",
+    "shallow_history",
+    "history_unavailable",
+    "ambiguous_history",
+    "dirty_worktree",
+    "generated_output",
+    "provider_mismatch",
+    "configuration_mismatch"
+  ]
+}

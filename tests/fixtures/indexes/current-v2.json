@@ -1,0 +1,21 @@
+{
+  "schema_version": "2.0.0",
+  "producer": {"name": "anatomize", "version": "fixture"},
+  "root_name": "empty-repository",
+  "source_state": {
+    "commit": null,
+    "dirty": false,
+    "python_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "python_file_count": 0,
+    "fact_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "fact_file_count": 0,
+    "provider_digest": "fixture-provider-digest"
+  },
+  "providers": [],
+  "files": [],
+  "python_roots": ["."],
+  "modules": [],
+  "symbols": [],
+  "import_edges": [],
+  "limitations": ["Golden current-schema fixture."]
+}

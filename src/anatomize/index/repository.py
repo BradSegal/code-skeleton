@@ -1,32 +1,44 @@
-"""Build and query portable repository indexes."""
+"""Build canonical baseline evidence inputs from a repository."""
 
 from __future__ import annotations
 
 import ast
-import copy
 import hashlib
 import json
-import os
-import tempfile
-from collections import deque
-from collections.abc import Iterable
+import sys
+import tokenize
 from pathlib import Path
 
-from pydantic import BaseModel
-
+from anatomize._python_imports import imported_module, join_module
 from anatomize.index.git import git_text, nul_paths
+from anatomize.index.intelligence import (
+    _codepoint_column,
+    build_duplicate_groups,
+    definition_fingerprints,
+    documentation_reference_facts,
+    markdown_sections,
+    python_reference_candidates,
+    resolve_symbol_facts,
+)
 from anatomize.index.models import (
-    ImpactNode,
-    ImpactRelationship,
-    ImpactReport,
-    ImpactRole,
+    DOCUMENTATION_TEXT_PROVIDER,
+    PYTHON_AST_PROVIDER,
+    REPOSITORY_INVENTORY_PROVIDER,
+    ArtifactProducer,
+    DocumentationSection,
+    FactProvider,
+    FileRecord,
+    FileRole,
     ImportEdge,
     ModuleRecord,
+    ProviderCompleteness,
+    ReferenceCandidate,
     RepositoryIndex,
     SourceState,
     SymbolKind,
     SymbolRecord,
 )
+from anatomize.version import __version__
 
 _EXCLUDED_PARTS = {
     ".anatomy",
@@ -41,6 +53,7 @@ _EXCLUDED_PARTS = {
     "dist",
 }
 _DOCUMENT_SUFFIXES = {".md", ".qmd", ".rst"}
+_INDEXED_DOCUMENT_SUFFIXES = {".md"}
 _CONFIG_SUFFIXES = {".json", ".toml", ".yaml", ".yml"}
 _CONFIG_NAMES = {
     "Makefile",
@@ -69,61 +82,61 @@ def build_repository_index(
     if not root.exists() or not root.is_dir():
         raise ValueError(f"Repository root must be an existing directory: {root}")
 
+    roots = _resolve_python_roots(root, python_roots)
+    return _assemble_repository_index(root, roots=roots)
+
+
+def _assemble_repository_index(
+    root: Path,
+    *,
+    roots: list[Path],
+) -> RepositoryIndex:
     files = _repository_files(root)
     python_files = [path for path in files if _is_python_source(path)]
-    roots = _resolve_python_roots(root, python_roots)
+    document_files = [path for path in files if path.suffix.lower() in _INDEXED_DOCUMENT_SUFFIXES]
+    file_records = _fact_file_records(root, files)
+    providers = _fact_providers()
     module_names = {path: _module_name(path, root=root, python_roots=roots) for path in python_files}
-    unique_modules = _unique_module_paths(module_names)
-
     modules: list[ModuleRecord] = []
     symbols: list[SymbolRecord] = []
-    imports_by_path: dict[Path, list[str]] = {}
-
+    candidates: list[ReferenceCandidate] = []
+    parse_failures: list[str] = []
     for path in python_files:
         rel = path.relative_to(root).as_posix()
-        tree = _parse_python(path)
-        exports = _module_exports(tree)
-        imports = _module_imports(
-            tree,
-            module_names[path],
-            is_package=path.name == "__init__.py",
-        )
-        imports_by_path[path] = imports
-        modules.append(
-            ModuleRecord(
+        try:
+            module, module_symbols, module_candidates = _python_module_facts(
+                path,
                 module=module_names[path],
                 path=rel,
-                imports=imports,
-                exports=sorted(exports),
             )
-        )
-        symbols.extend(
-            _symbols_for_module(
-                tree,
-                module=module_names[path],
-                path=rel,
-                exports=exports,
-            )
-        )
+        except ValueError as error:
+            parse_failures.append(f"{rel}: {error}")
+            modules.append(ModuleRecord(module=module_names[path], path=rel))
+            continue
+        modules.append(module)
+        symbols.extend(module_symbols)
+        candidates.extend(module_candidates)
 
-    edges: list[ImportEdge] = []
-    for importer_path, imports in imports_by_path.items():
-        for imported in imports:
-            target = unique_modules.get(imported)
-            if target is None:
-                continue
-            edges.append(
-                ImportEdge(
-                    importer=module_names[importer_path],
-                    imported=imported,
-                    importer_path=importer_path.relative_to(root).as_posix(),
-                    imported_path=target.relative_to(root).as_posix(),
-                )
-            )
+    edges = _resolved_import_edges(modules)
+    sections: list[DocumentationSection] = []
+    for path in document_files:
+        relative = path.relative_to(root).as_posix()
+        sections.extend(markdown_sections(path, path=relative))
+    occurrences, unresolved_candidates = resolve_symbol_facts(symbols, candidates)
+    documentation_occurrences = documentation_reference_facts(
+        root,
+        sections,
+        symbols,
+    )
+    occurrences.extend(documentation_occurrences)
+    duplicate_groups = build_duplicate_groups(symbols, sections)
 
     return RepositoryIndex(
+        producer=ArtifactProducer(version=__version__),
         root_name=root.name,
-        source_state=_source_state(root, python_files),
+        source_state=_source_state(root, python_files, file_records, providers),
+        providers=providers,
+        files=file_records,
         python_roots=["." if item == root else item.relative_to(root).as_posix() for item in roots],
         modules=sorted(modules, key=lambda item: (item.module, item.path)),
         symbols=sorted(
@@ -138,196 +151,200 @@ def build_repository_index(
                 item.imported,
             ),
         ),
+        occurrences=sorted(
+            occurrences,
+            key=lambda item: (item.path, item.line, item.column, item.kind.value, item.symbol_id),
+        ),
+        documentation_sections=sorted(sections, key=lambda item: (item.path, item.line, item.heading)),
+        duplicate_groups=duplicate_groups,
         limitations=[
             "Import edges are static Python imports; dynamic imports and runtime call paths are not inferred.",
-            "R and other languages remain visible as related files but do not receive semantic symbol edges in v1.",
+            "R and other languages remain visible as related files but do not receive semantic symbol edges "
+            "from the baseline provider.",
             "Text references locate supporting context and do not prove behavioral dependence.",
+            f"The baseline lexical provider omitted {unresolved_candidates} unresolved or ambiguous candidates.",
+            *(
+                [
+                    f"The Python provider could not parse {len(parse_failures)} file(s): "
+                    + "; ".join(parse_failures[:8])
+                ]
+                if parse_failures
+                else []
+            ),
+            "Attribute dispatch, local type inference, dynamic imports, and runtime call paths are omitted.",
         ],
     )
 
 
-def load_repository_index(
-    root: Path,
-    path: Path,
-    *,
-    require_current: bool = True,
-) -> RepositoryIndex:
-    """Load an index and optionally reject source drift."""
-    root = root.resolve()
-    try:
-        index = RepositoryIndex.model_validate_json(path.read_text(encoding="utf-8"))
-    except OSError as error:
-        raise ValueError(f"Failed to read repository index: {path}") from error
-    if require_current:
-        current = build_repository_index(
-            root,
-            python_roots=[root if item == "." else root / item for item in index.python_roots],
-        )
-        if (
-            current.source_state.commit != index.source_state.commit
-            or current.source_state.python_digest != index.source_state.python_digest
-            or current.source_state.python_file_count != index.source_state.python_file_count
-        ):
-            raise ValueError("Repository index is stale for the current Python source state; regenerate it")
-    return index
-
-
-def find_symbols(index: RepositoryIndex, query: str) -> list[SymbolRecord]:
-    """Find definitions with exact matches ranked before partial matches."""
-    query = query.strip()
-    if not query:
-        raise ValueError("Query must be non-empty")
-    exact = [symbol for symbol in index.symbols if query in {symbol.name, symbol.qualified_name, symbol.path}]
-    if exact:
-        return exact
-    lowered = query.casefold()
+def _fact_providers() -> list[FactProvider]:
     return [
-        symbol
-        for symbol in index.symbols
-        if lowered in symbol.name.casefold()
-        or lowered in symbol.qualified_name.casefold()
-        or lowered in symbol.path.casefold()
+        FactProvider(
+            provider_id=PYTHON_AST_PROVIDER,
+            version=__version__,
+            capabilities=[
+                "python_symbols",
+                "static_python_imports",
+                "lexical_symbol_occurrences",
+                "structural_duplicate_candidates",
+            ],
+            completeness=ProviderCompleteness.COMPLETE,
+            limitations=[
+                "Dynamic imports, runtime call paths, external-package definitions, and inferred "
+                "attribute dispatch are not resolved."
+            ],
+        ),
+        FactProvider(
+            provider_id=DOCUMENTATION_TEXT_PROVIDER,
+            version=__version__,
+            capabilities=["markdown_sections", "documentation_duplicate_candidates"],
+            completeness=ProviderCompleteness.COMPLETE,
+            limitations=[
+                "Only ATX-heading-bounded Markdown sections are indexed; semantic paraphrases are not compared."
+            ],
+        ),
+        FactProvider(
+            provider_id=REPOSITORY_INVENTORY_PROVIDER,
+            version=__version__,
+            capabilities=["repository_file_inventory", "configuration_files"],
+            completeness=ProviderCompleteness.COMPLETE,
+            limitations=[
+                "The baseline inventory records metadata, not configuration semantics or execution behavior."
+            ],
+        ),
     ]
 
 
-def build_impact_report(
-    root: Path,
-    index: RepositoryIndex,
-    query: str,
-    *,
-    max_depth: int = 1,
-    include_related: bool = True,
-    max_related_per_role: int = 20,
-    semantic_references: bool = False,
-    pyright_langserver_cmd: list[str] | None = None,
-) -> ImpactReport:
-    """Build a role-labelled dependency and context impact report."""
-    if max_depth < 0:
-        raise ValueError("max_depth must be non-negative")
-    root = root.resolve()
-    focus, terms = _resolve_focus(root, index, query)
-    nodes = _graph_nodes(index, focus, max_depth=max_depth)
-    if semantic_references:
-        _add_semantic_references(
-            root,
-            index,
-            focus,
-            nodes,
-            langserver_cmd=pyright_langserver_cmd,
-        )
-    unresolved: list[str] = []
-    related_omissions: dict[str, int] = {}
-    if include_related:
-        nodes, related_omissions = _add_related_files(
-            root,
-            nodes,
-            terms,
-            max_per_role=max_related_per_role,
-        )
-    if not focus:
-        unresolved.append(f"No indexed Python file or symbol matched: {query}")
-
-    return ImpactReport(
-        root_name=index.root_name,
-        source_state=index.source_state,
-        query=query,
-        focus=sorted(focus),
-        nodes=_sorted_nodes(nodes.values()),
-        related_omissions=related_omissions,
-        unresolved=unresolved,
-        limitations=index.limitations,
-    )
-
-
-def write_json(value: BaseModel | dict[str, object] | list[object], path: Path) -> None:
-    """Write a Pydantic model or JSON-compatible value atomically."""
-    payload: object
-    if isinstance(value, BaseModel):
-        payload = value.model_dump(mode="json")
-    else:
-        payload = value
-    text = (
-        json.dumps(
-            payload,
-            ensure_ascii=False,
-            indent=2,
-            sort_keys=True,
-        )
-        + "\n"
-    )
-    path = path.resolve()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(
-        "w",
-        encoding="utf-8",
-        dir=path.parent,
-        prefix=f".{path.name}.",
-        suffix=".tmp",
-        delete=False,
-    ) as handle:
-        temporary = Path(handle.name)
-        handle.write(text)
-        handle.flush()
-        os.fsync(handle.fileno())
-    try:
-        os.replace(temporary, path)
-    finally:
-        temporary.unlink(missing_ok=True)
-
-
-def build_review_pack(
-    root: Path,
-    nodes: Iterable[ImpactNode],
-    *,
-    max_total_bytes: int = 1_000_000,
-    max_file_bytes: int = 200_000,
-) -> dict[str, object]:
-    """Build a bounded, deterministic JSON review bundle from an impact surface."""
-    if max_total_bytes < 0 or max_file_bytes < 0:
-        raise ValueError("Review-pack byte limits must be non-negative")
-    root = root.resolve()
-    files: list[dict[str, object]] = []
-    omitted: list[dict[str, str]] = []
-    consumed = 0
-    for node in _sorted_nodes(nodes):
-        path = root / node.path
-        if not path.is_file() or path.is_symlink():
-            omitted.append({"path": node.path, "reason": "not present in working tree"})
-            continue
-        size = path.stat().st_size
-        if size > max_file_bytes:
-            omitted.append({"path": node.path, "reason": "file byte limit"})
-            continue
-        try:
-            content = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeError):
-            omitted.append({"path": node.path, "reason": "not UTF-8 text"})
-            continue
-        encoded_size = len(content.encode("utf-8"))
-        if consumed + encoded_size > max_total_bytes:
-            omitted.append({"path": node.path, "reason": "total byte limit"})
-            continue
-        files.append(
-            {
-                "path": node.path,
-                "relationships": [item.model_dump(mode="json") for item in _relationships(node)],
-                "content": content,
-            }
-        )
-        consumed += encoded_size
-    return {
-        "schema_version": "1.0.0",
-        "root_name": root.name,
-        "consumed_bytes": consumed,
-        "max_total_bytes": max_total_bytes,
-        "max_file_bytes": max_file_bytes,
-        "files": files,
-        "omitted": omitted,
-        "limitations": [
-            "The bundle contains selected source text, not trusted instructions or a quality verdict.",
-            "Absent baseline files remain in the impact report but cannot contribute working-tree content.",
-        ],
+def _provider_digest(providers: list[FactProvider]) -> str:
+    payload = {
+        "python": list(sys.version_info[:2]),
+        "providers": [item.model_dump(mode="json") for item in providers],
     }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def _fact_file_records(root: Path, fact_files: list[Path]) -> list[FileRecord]:
+    records: list[FileRecord] = []
+    for path in fact_files:
+        relative = path.relative_to(root).as_posix()
+        content = path.read_bytes()
+        is_python = _is_python_source(path)
+        suffix = path.suffix.casefold()
+        is_r = suffix == ".r"
+        is_documentation = suffix in _DOCUMENT_SUFFIXES or suffix == ".rmd"
+        is_configuration = _is_indexed_configuration(path)
+        parts = {part.casefold() for part in path.relative_to(root).parts[:-1]}
+        roles: set[FileRole] = set()
+        if is_python:
+            roles.add(FileRole.TEST if _is_test_path(relative) else FileRole.SOURCE)
+            language = "python"
+            provider_id = PYTHON_AST_PROVIDER
+        elif is_r:
+            roles.add(FileRole.TEST if _is_test_path(relative) else FileRole.SOURCE)
+            language = "r"
+            provider_id = REPOSITORY_INVENTORY_PROVIDER
+        elif suffix == ".ipynb":
+            roles.update({FileRole.SOURCE, FileRole.DOCUMENTATION})
+            language = "jupyter"
+            provider_id = REPOSITORY_INVENTORY_PROVIDER
+        elif is_documentation:
+            roles.add(FileRole.DOCUMENTATION)
+            if suffix in {".qmd", ".rmd"}:
+                roles.add(FileRole.SOURCE)
+            language = "markdown" if suffix in {".md", ".qmd"} else suffix.removeprefix(".")
+            provider_id = DOCUMENTATION_TEXT_PROVIDER if suffix == ".md" else REPOSITORY_INVENTORY_PROVIDER
+        elif parts.intersection({"data", "datasets"}):
+            roles.add(FileRole.DATA)
+            language = suffix.removeprefix(".") or path.name.casefold()
+            provider_id = REPOSITORY_INVENTORY_PROVIDER
+        elif parts.intersection({"workflow", "workflows", "pipelines"}) or path.name == "Snakefile":
+            roles.add(FileRole.WORKFLOW)
+            language = suffix.removeprefix(".") or path.name.casefold()
+            provider_id = REPOSITORY_INVENTORY_PROVIDER
+        elif parts.intersection({"artifacts", "derived", "outputs", "reports", "results"}):
+            roles.add(FileRole.ARTIFACT)
+            language = suffix.removeprefix(".") or path.name.casefold()
+            provider_id = REPOSITORY_INVENTORY_PROVIDER
+        elif is_configuration:
+            roles.add(FileRole.CONFIGURATION)
+            language = suffix.removeprefix(".") or path.name.casefold()
+            provider_id = REPOSITORY_INVENTORY_PROVIDER
+        else:
+            roles.add(FileRole.OTHER)
+            language = suffix.removeprefix(".") or path.name.casefold()
+            provider_id = REPOSITORY_INVENTORY_PROVIDER
+        records.append(
+            FileRecord(
+                file_id=_file_id(relative),
+                path=relative,
+                language=language,
+                digest=hashlib.sha256(content).hexdigest(),
+                size=len(content),
+                roles=sorted(roles, key=lambda item: item.value),
+                provider_ids=[provider_id],
+            )
+        )
+    return sorted(records, key=lambda item: item.path)
+
+
+def _file_id(path: str) -> str:
+    return f"file:{path}"
+
+
+def _symbol_id(qualified_name: str, path: str, *, duplicate_ordinal: int) -> str:
+    suffix = "" if duplicate_ordinal == 1 else f"#{duplicate_ordinal}"
+    return f"python:{qualified_name}@{path}{suffix}"
+
+
+def _python_module_facts(
+    source: Path,
+    *,
+    module: str,
+    path: str,
+) -> tuple[ModuleRecord, list[SymbolRecord], list[ReferenceCandidate]]:
+    tree, source_text = _parse_python(source)
+    source_lines = source_text.splitlines()
+    exports = _module_exports(tree)
+    imports = _module_imports(tree, module, is_package=source.name == "__init__.py")
+    symbols = _symbols_for_module(
+        tree,
+        module=module,
+        path=path,
+        exports=exports,
+        source_lines=source_lines,
+    )
+    return (
+        ModuleRecord(module=module, path=path, imports=imports, exports=sorted(exports)),
+        symbols,
+        python_reference_candidates(
+            tree,
+            module=module,
+            path=path,
+            symbols=symbols,
+            is_package=source.name == "__init__.py",
+            source_lines=source_lines,
+        ),
+    )
+
+
+def _resolved_import_edges(modules: list[ModuleRecord]) -> list[ImportEdge]:
+    grouped: dict[str, list[str]] = {}
+    for module in modules:
+        grouped.setdefault(module.module, []).append(module.path)
+    unique_modules = {module: paths[0] for module, paths in grouped.items() if len(paths) == 1}
+    edges = [
+        ImportEdge(
+            importer=module.module,
+            imported=imported,
+            importer_path=module.path,
+            imported_path=unique_modules[imported],
+        )
+        for module in modules
+        for imported in module.imports
+        if imported in unique_modules
+    ]
+    return sorted(edges, key=lambda item: (item.importer_path, item.imported_path, item.imported))
 
 
 def _repository_files(root: Path) -> list[Path]:
@@ -391,20 +408,35 @@ def _is_python_source(path: Path) -> bool:
     return first_line.startswith("#!") and "python" in first_line.casefold()
 
 
-def _unique_module_paths(module_names: dict[Path, str]) -> dict[str, Path]:
-    grouped: dict[str, list[Path]] = {}
-    for path, module in module_names.items():
-        grouped.setdefault(module, []).append(path)
-    return {module: paths[0] for module, paths in grouped.items() if len(paths) == 1}
+def _is_indexed_configuration(path: Path) -> bool:
+    name = path.name.casefold()
+    return (
+        path.suffix.lower() in {".toml", ".yaml", ".yml"}
+        or path.name in _CONFIG_NAMES
+        or path.name.startswith(".")
+        or name in {"package.json", "tsconfig.json", "composer.json"}
+        or name.endswith("config.json")
+    )
 
 
-def _parse_python(path: Path) -> ast.Module:
+def _fact_provider_id(path: Path) -> str | None:
+    if _is_python_source(path):
+        return PYTHON_AST_PROVIDER
+    if path.suffix.lower() in _INDEXED_DOCUMENT_SUFFIXES:
+        return DOCUMENTATION_TEXT_PROVIDER
+    if _is_indexed_configuration(path):
+        return REPOSITORY_INVENTORY_PROVIDER
+    return None
+
+
+def _parse_python(path: Path) -> tuple[ast.Module, str]:
     try:
-        source = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError) as exc:
+        with tokenize.open(path) as handle:
+            source = handle.read()
+    except (OSError, UnicodeError, SyntaxError) as exc:
         raise ValueError(f"Failed to read Python source: {path}") from exc
     try:
-        return ast.parse(source, filename=path.as_posix())
+        return ast.parse(source, filename=path.as_posix()), source
     except SyntaxError as exc:
         raise ValueError(f"Syntax error while indexing {path}: {exc.msg} at line {exc.lineno}") from exc
 
@@ -431,45 +463,59 @@ def _symbols_for_module(
     module: str,
     path: str,
     exports: set[str],
+    source_lines: list[str],
 ) -> list[SymbolRecord]:
     records: list[SymbolRecord] = []
+    ordinals: dict[str, int] = {}
+
+    def append_record(
+        *,
+        name: str,
+        qualified: str,
+        kind: SymbolKind,
+        node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+        declared_exports: set[str],
+    ) -> None:
+        ordinal = ordinals.get(qualified, 0) + 1
+        ordinals[qualified] = ordinal
+        records.append(
+            _symbol_record(
+                name=name,
+                qualified=qualified,
+                kind=kind,
+                path=path,
+                node=node,
+                exports=declared_exports,
+                duplicate_ordinal=ordinal,
+                source_lines=source_lines,
+            )
+        )
+
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            records.append(
-                _symbol_record(
-                    name=node.name,
-                    qualified=f"{module}.{node.name}",
-                    kind=SymbolKind.FUNCTION,
-                    path=path,
-                    node=node,
-                    exports=exports,
-                )
+            append_record(
+                name=node.name,
+                qualified=f"{module}.{node.name}",
+                kind=SymbolKind.FUNCTION,
+                node=node,
+                declared_exports=exports,
             )
         elif isinstance(node, ast.ClassDef):
-            records.append(
-                _symbol_record(
-                    name=node.name,
-                    qualified=f"{module}.{node.name}",
-                    kind=SymbolKind.CLASS,
-                    path=path,
-                    node=node,
-                    exports=exports,
-                )
+            append_record(
+                name=node.name,
+                qualified=f"{module}.{node.name}",
+                kind=SymbolKind.CLASS,
+                node=node,
+                declared_exports=exports,
             )
             for method in node.body:
                 if isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    records.append(
-                        SymbolRecord(
-                            name=method.name,
-                            qualified_name=f"{module}.{node.name}.{method.name}",
-                            kind=SymbolKind.METHOD,
-                            path=path,
-                            line=method.lineno,
-                            end_line=method.end_lineno or method.lineno,
-                            column=method.col_offset,
-                            digest=_definition_digest(method),
-                            public=not method.name.startswith("_"),
-                        )
+                    append_record(
+                        name=method.name,
+                        qualified=f"{module}.{node.name}.{method.name}",
+                        kind=SymbolKind.METHOD,
+                        node=method,
+                        declared_exports=set(),
                     )
     return records
 
@@ -482,25 +528,30 @@ def _symbol_record(
     path: str,
     node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
     exports: set[str],
+    duplicate_ordinal: int,
+    source_lines: list[str],
 ) -> SymbolRecord:
+    fingerprints = definition_fingerprints(node)
     return SymbolRecord(
+        symbol_id=_symbol_id(qualified, path, duplicate_ordinal=duplicate_ordinal),
         name=name,
         qualified_name=qualified,
         kind=kind,
         path=path,
         line=node.lineno,
         end_line=node.end_lineno or node.lineno,
-        column=node.col_offset,
-        digest=_definition_digest(node),
+        column=_codepoint_column(source_lines, node.lineno, node.col_offset),
+        end_column=_codepoint_column(
+            source_lines,
+            node.end_lineno or node.lineno,
+            node.end_col_offset or node.col_offset,
+        ),
+        digest=fingerprints.structural_digest,
+        exact_digest=fingerprints.exact_digest,
+        node_count=fingerprints.node_count,
+        body_line_count=fingerprints.body_line_count,
         public=name in exports or not name.startswith("_"),
     )
-
-
-def _definition_digest(node: ast.AST) -> str:
-    normalized = copy.deepcopy(node)
-    if isinstance(normalized, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-        normalized.name = "_"
-    return hashlib.sha256(ast.dump(normalized, include_attributes=False).encode("utf-8")).hexdigest()
 
 
 def _module_imports(
@@ -510,46 +561,45 @@ def _module_imports(
     is_package: bool,
 ) -> list[str]:
     imports: list[str] = []
-    current_package = module if is_package else module.rpartition(".")[0]
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             imports.extend(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom):
-            base = _relative_base(current_package, node.level)
-            imported = _join_module(base, node.module or "")
-            if imported:
-                imports.append(imported)
-                imports.extend(_join_module(imported, alias.name) for alias in node.names if alias.name != "*")
-            if node.module is None:
-                imports.extend(_join_module(base, alias.name) for alias in node.names if alias.name != "*")
+            resolved = imported_module(
+                module,
+                is_package=is_package,
+                imported=node.module,
+                level=node.level,
+            )
+            if resolved:
+                imports.append(resolved)
+                imports.extend(join_module(resolved, alias.name) for alias in node.names if alias.name != "*")
+            if node.module is None and resolved is not None:
+                imports.extend(join_module(resolved, alias.name) for alias in node.names if alias.name != "*")
     return list(dict.fromkeys(imports))
 
 
-def _relative_base(package: str, level: int) -> str:
-    if level <= 0:
-        return ""
-    parts = package.split(".") if package else []
-    up = level - 1
-    if up > len(parts):
-        return ""
-    return ".".join(parts[: len(parts) - up])
-
-
-def _join_module(base: str, suffix: str) -> str:
-    if not base:
-        return suffix
-    if not suffix:
-        return base
-    return f"{base}.{suffix}"
-
-
-def _source_state(root: Path, python_files: list[Path]) -> SourceState:
-    digest = hashlib.sha256()
+def _source_state(
+    root: Path,
+    python_files: list[Path],
+    file_records: list[FileRecord],
+    providers: list[FactProvider],
+) -> SourceState:
+    python_digest = hashlib.sha256()
+    fact_digest = hashlib.sha256()
+    records_by_path = {item.path: item for item in file_records}
     for path in python_files:
         relative = path.relative_to(root).as_posix()
-        digest.update(relative.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(hashlib.sha256(path.read_bytes()).digest())
+        record = records_by_path[relative]
+        python_digest.update(relative.encode("utf-8"))
+        python_digest.update(b"\0")
+        python_digest.update(bytes.fromhex(record.digest))
+    for record in file_records:
+        fact_digest.update(record.path.encode("utf-8"))
+        fact_digest.update(b"\0")
+        fact_digest.update(bytes.fromhex(record.digest))
+        fact_digest.update(b"\0")
+        fact_digest.update("\0".join(record.provider_ids).encode("utf-8"))
     try:
         commit = git_text(root, ["rev-parse", "HEAD"]).strip() or None
         dirty = bool(git_text(root, ["status", "--porcelain=v1", "-z"]))
@@ -559,279 +609,14 @@ def _source_state(root: Path, python_files: list[Path]) -> SourceState:
     return SourceState(
         commit=commit,
         dirty=dirty,
-        python_digest=digest.hexdigest(),
+        python_digest=python_digest.hexdigest(),
         python_file_count=len(python_files),
+        fact_digest=fact_digest.hexdigest(),
+        fact_file_count=len(file_records),
+        provider_digest=_provider_digest(providers),
     )
-
-
-def _resolve_focus(
-    root: Path,
-    index: RepositoryIndex,
-    query: str,
-) -> tuple[set[str], set[str]]:
-    normalized = query.replace("\\", "/").lstrip("./")
-    module_by_path = {module.path: module for module in index.modules}
-    focus: set[str] = set()
-    terms: set[str] = {Path(normalized).stem}
-    candidate_path = root / normalized
-    if candidate_path.is_file() and not candidate_path.is_symlink():
-        focus.add(normalized)
-    if normalized in module_by_path:
-        focus.add(normalized)
-        terms.add(module_by_path[normalized].module)
-    else:
-        matches = find_symbols(index, query)
-        exact = [item for item in matches if query in {item.name, item.qualified_name}]
-        chosen = exact or matches
-        focus.update(item.path for item in chosen)
-        terms.update(item.name for item in chosen)
-        terms.update(item.qualified_name for item in chosen)
-    return focus, {term for term in terms if len(term) > 2}
-
-
-def _graph_nodes(
-    index: RepositoryIndex,
-    focus: set[str],
-    *,
-    max_depth: int,
-) -> dict[str, ImpactNode]:
-    nodes = {
-        path: ImpactNode(
-            path=path,
-            role=ImpactRole.FOCUS,
-            distance=0,
-            reason="matched target file or symbol",
-            relationships=[
-                ImpactRelationship(
-                    role=ImpactRole.FOCUS,
-                    distance=0,
-                    reason="matched target file or symbol",
-                    source="target",
-                )
-            ],
-        )
-        for path in focus
-    }
-    forward: dict[str, set[str]] = {}
-    reverse: dict[str, set[str]] = {}
-    for edge in index.import_edges:
-        forward.setdefault(edge.importer_path, set()).add(edge.imported_path)
-        reverse.setdefault(edge.imported_path, set()).add(edge.importer_path)
-    _walk_graph(nodes, focus, forward, role=ImpactRole.DEPENDENCY, max_depth=max_depth)
-    _walk_graph(nodes, focus, reverse, role=ImpactRole.IMPORTER, max_depth=max_depth)
-    return nodes
-
-
-def _walk_graph(
-    nodes: dict[str, ImpactNode],
-    starts: set[str],
-    graph: dict[str, set[str]],
-    *,
-    role: ImpactRole,
-    max_depth: int,
-) -> None:
-    queue = deque((path, 0) for path in sorted(starts))
-    visited = set(starts)
-    while queue:
-        current, distance = queue.popleft()
-        if distance >= max_depth:
-            continue
-        for adjacent in sorted(graph.get(current, set())):
-            next_distance = distance + 1
-            candidate_role = ImpactRole.TEST if _is_test_path(adjacent) and role is ImpactRole.IMPORTER else role
-            _merge_node(
-                nodes,
-                ImpactNode(
-                    path=adjacent,
-                    role=candidate_role,
-                    distance=next_distance,
-                    reason=(f"static import graph {role.value} at distance {next_distance}"),
-                    relationships=[
-                        ImpactRelationship(
-                            role=candidate_role,
-                            distance=next_distance,
-                            reason=f"static import graph {role.value} at distance {next_distance}",
-                            source="static_import",
-                        )
-                    ],
-                ),
-            )
-            if adjacent not in visited:
-                visited.add(adjacent)
-                queue.append((adjacent, next_distance))
-
-
-def _add_related_files(
-    root: Path,
-    nodes: dict[str, ImpactNode],
-    terms: set[str],
-    *,
-    max_per_role: int,
-) -> tuple[dict[str, ImpactNode], dict[str, int]]:
-    if max_per_role < 0:
-        raise ValueError("max_per_role must be non-negative")
-    if not terms:
-        return nodes, {}
-    included: dict[ImpactRole, int] = {}
-    omitted: dict[str, int] = {}
-    for path in _repository_files(root):
-        relative = path.relative_to(root).as_posix()
-        if path.stat().st_size > 1_000_000:
-            continue
-        role = _related_role(relative, path)
-        if role is None:
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeError):
-            continue
-        matched = next((term for term in sorted(terms) if term in text), None)
-        if matched is None:
-            continue
-        if included.get(role, 0) >= max_per_role:
-            omitted[role.value] = omitted.get(role.value, 0) + 1
-            continue
-        _merge_node(
-            nodes,
-            ImpactNode(
-                path=relative,
-                role=role,
-                distance=1,
-                reason=f"text reference to {matched}",
-                relationships=[
-                    ImpactRelationship(
-                        role=role,
-                        distance=1,
-                        reason=f"text reference to {matched}",
-                        source="text_reference",
-                    )
-                ],
-            ),
-        )
-        included[role] = included.get(role, 0) + 1
-    return nodes, dict(sorted(omitted.items()))
-
-
-def _related_role(relative: str, path: Path) -> ImpactRole | None:
-    if _is_test_path(relative):
-        return ImpactRole.TEST
-    if path.suffix.lower() in _DOCUMENT_SUFFIXES:
-        return ImpactRole.DOCUMENTATION
-    if path.suffix.lower() in _CONFIG_SUFFIXES or path.name in _CONFIG_NAMES or path.name.startswith("."):
-        return ImpactRole.CONFIGURATION
-    return None
 
 
 def _is_test_path(relative: str) -> bool:
     parts = Path(relative).parts
     return "tests" in parts or Path(relative).name.startswith("test_")
-
-
-def _merge_node(nodes: dict[str, ImpactNode], candidate: ImpactNode) -> None:
-    existing = nodes.get(candidate.path)
-    if existing is None:
-        nodes[candidate.path] = candidate
-        return
-    priority = {
-        ImpactRole.FOCUS: 0,
-        ImpactRole.TEST: 1,
-        ImpactRole.DEPENDENCY: 2,
-        ImpactRole.IMPORTER: 3,
-        ImpactRole.REFERENCE: 4,
-        ImpactRole.DOCUMENTATION: 5,
-        ImpactRole.CONFIGURATION: 6,
-    }
-    primary = (
-        candidate
-        if (candidate.distance, priority[candidate.role])
-        < (
-            existing.distance,
-            priority[existing.role],
-        )
-        else existing
-    )
-    relationships = {
-        (item.role, item.distance, item.reason, item.source): item
-        for item in (*_relationships(existing), *_relationships(candidate))
-    }
-    nodes[candidate.path] = ImpactNode(
-        path=primary.path,
-        role=primary.role,
-        distance=primary.distance,
-        reason=primary.reason,
-        relationships=sorted(
-            relationships.values(),
-            key=lambda item: (item.distance, priority[item.role], item.source, item.reason),
-        ),
-    )
-
-
-def _relationships(node: ImpactNode) -> list[ImpactRelationship]:
-    if node.relationships:
-        return node.relationships
-    return [
-        ImpactRelationship(
-            role=node.role,
-            distance=node.distance,
-            reason=node.reason,
-            source="primary",
-        )
-    ]
-
-
-def _add_semantic_references(
-    root: Path,
-    index: RepositoryIndex,
-    focus: set[str],
-    nodes: dict[str, ImpactNode],
-    *,
-    langserver_cmd: list[str] | None,
-) -> None:
-    from anatomize.pack.pyright_lsp import pyright_referenced_files
-    from anatomize.pack.uses import python_public_symbol_positions
-
-    python_roots = [root if item == "." else root / item for item in index.python_roots]
-    workspace_files = [root / module.path for module in index.modules]
-    for relative in sorted(focus):
-        target = root / relative
-        if target.suffix != ".py" or not target.is_file():
-            continue
-        positions = python_public_symbol_positions(target, include_private=True)
-        if not positions:
-            continue
-        references = pyright_referenced_files(
-            root=root,
-            target_file=target,
-            positions=positions,
-            langserver_cmd=langserver_cmd or ["pyright-langserver", "--stdio"],
-            python_roots=python_roots,
-            workspace_files=workspace_files,
-        )
-        for reference in references:
-            relative_reference = reference.relative_to(root).as_posix()
-            _merge_node(
-                nodes,
-                ImpactNode(
-                    path=relative_reference,
-                    role=ImpactRole.REFERENCE,
-                    distance=1,
-                    reason=f"Pyright semantic reference to {relative}",
-                    relationships=[
-                        ImpactRelationship(
-                            role=ImpactRole.REFERENCE,
-                            distance=1,
-                            reason=f"Pyright semantic reference to {relative}",
-                            source="pyright",
-                        )
-                    ],
-                ),
-            )
-
-
-def _sorted_nodes(nodes: Iterable[ImpactNode]) -> list[ImpactNode]:
-    values = list(nodes)
-    role_order = {role: index for index, role in enumerate(ImpactRole)}
-    return sorted(
-        values,
-        key=lambda item: (item.distance, role_order[item.role], item.path),
-    )

@@ -1,0 +1,7 @@
+Package: trialtools
+Type: Package
+Title: Mixed Language Trial Analysis Fixture
+Version: 0.1.0
+Imports: jsonlite, arrow
+Suggests: testthat
+Config/testthat/edition: 3

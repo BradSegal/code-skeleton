@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"result":[{"name":"estimate_effect","kind":12,"location":{"uri":"file:///fixture/R/estimate.R","range":{"start":{"line":2,"character":0},"end":{"line":5,"character":1}}}}]}

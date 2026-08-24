@@ -1,0 +1,135 @@
+{
+  "$defs": {
+    "ImplementationObligation": {
+      "additionalProperties": false,
+      "properties": {
+        "expectation": {
+          "title": "Expectation",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ObligationKind"
+        },
+        "obligation_id": {
+          "title": "Obligation Id",
+          "type": "string"
+        },
+        "required_evidence_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Required Evidence Kinds",
+          "type": "array"
+        },
+        "subject_ref": {
+          "title": "Subject Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "obligation_id",
+        "kind",
+        "subject_ref",
+        "expectation",
+        "required_evidence_kinds"
+      ],
+      "title": "ImplementationObligation",
+      "type": "object"
+    },
+    "ObligationKind": {
+      "enum": [
+        "owner",
+        "contract",
+        "consumer",
+        "candidate",
+        "test",
+        "documentation",
+        "workflow",
+        "unknown"
+      ],
+      "title": "ObligationKind",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifact_type": {
+      "const": "anatomize.implementation-intent",
+      "default": "anatomize.implementation-intent",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "before_dossier_id": {
+      "title": "Before Dossier Id",
+      "type": "string"
+    },
+    "before_evidence_digest": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "title": "Before Evidence Digest",
+      "type": "string"
+    },
+    "before_provider_digests": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Before Provider Digests",
+      "type": "object"
+    },
+    "before_source_state_id": {
+      "title": "Before Source State Id",
+      "type": "string"
+    },
+    "decision_overlay_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision Overlay Id"
+    },
+    "declared_unknowns": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Declared Unknowns",
+      "type": "array"
+    },
+    "intent_id": {
+      "title": "Intent Id",
+      "type": "string"
+    },
+    "obligations": {
+      "items": {
+        "$ref": "#/$defs/ImplementationObligation"
+      },
+      "title": "Obligations",
+      "type": "array"
+    },
+    "repository_id": {
+      "title": "Repository Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "intent_id",
+    "repository_id",
+    "before_source_state_id",
+    "before_dossier_id",
+    "before_evidence_digest",
+    "before_provider_digests",
+    "obligations"
+  ],
+  "title": "ImplementationIntent",
+  "type": "object"
+}

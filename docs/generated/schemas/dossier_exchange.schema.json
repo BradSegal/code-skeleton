@@ -1,0 +1,1752 @@
+{
+  "$defs": {
+    "BudgetCounter": {
+      "additionalProperties": false,
+      "description": "One exact declared limit and its deterministic use.",
+      "properties": {
+        "limit": {
+          "minimum": 0,
+          "title": "Limit",
+          "type": "integer"
+        },
+        "used": {
+          "minimum": 0,
+          "title": "Used",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "limit",
+        "used"
+      ],
+      "title": "BudgetCounter",
+      "type": "object"
+    },
+    "ContentClass": {
+      "description": "Privacy-aware file/content classification.",
+      "enum": [
+        "ordinary",
+        "binary",
+        "large",
+        "generated",
+        "vendor",
+        "ignored",
+        "sensitive",
+        "external",
+        "opaque"
+      ],
+      "title": "ContentClass",
+      "type": "string"
+    },
+    "ContentRange": {
+      "additionalProperties": false,
+      "description": "Half-open content range used by a dossier slice.",
+      "properties": {
+        "end_column": {
+          "minimum": 0,
+          "title": "End Column",
+          "type": "integer"
+        },
+        "end_line": {
+          "minimum": 1,
+          "title": "End Line",
+          "type": "integer"
+        },
+        "start_column": {
+          "minimum": 0,
+          "title": "Start Column",
+          "type": "integer"
+        },
+        "start_line": {
+          "minimum": 1,
+          "title": "Start Line",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start_line",
+        "start_column",
+        "end_line",
+        "end_column"
+      ],
+      "title": "ContentRange",
+      "type": "object"
+    },
+    "Dossier": {
+      "additionalProperties": false,
+      "description": "Source-bound progressively expandable evidence dossier.",
+      "properties": {
+        "artifact_type": {
+          "const": "anatomize.dossier",
+          "default": "anatomize.dossier",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "base_dossier_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Dossier Id"
+        },
+        "boundary": {
+          "$ref": "#/$defs/DossierBoundary"
+        },
+        "budget_use": {
+          "$ref": "#/$defs/DossierBudgetUse"
+        },
+        "content": {
+          "items": {
+            "$ref": "#/$defs/DossierContent"
+          },
+          "title": "Content",
+          "type": "array"
+        },
+        "dossier_id": {
+          "minLength": 1,
+          "title": "Dossier Id",
+          "type": "string"
+        },
+        "expansions": {
+          "items": {
+            "$ref": "#/$defs/ExpansionAction"
+          },
+          "title": "Expansions",
+          "type": "array"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/DossierGroup"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DossierItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "omissions": {
+          "items": {
+            "$ref": "#/$defs/DossierOmission"
+          },
+          "title": "Omissions",
+          "type": "array"
+        },
+        "policy_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "repository_id": {
+          "minLength": 1,
+          "title": "Repository Id",
+          "type": "string"
+        },
+        "request_id": {
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "session_manifest_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Session Manifest Digest",
+          "type": "string"
+        },
+        "source_state_ids": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 1,
+          "title": "Source State Ids",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/DossierStatus"
+        }
+      },
+      "required": [
+        "dossier_id",
+        "request_id",
+        "session_id",
+        "session_manifest_digest",
+        "repository_id",
+        "source_state_ids",
+        "policy_digest",
+        "status",
+        "boundary",
+        "budget_use"
+      ],
+      "title": "Dossier",
+      "type": "object"
+    },
+    "DossierBoundary": {
+      "additionalProperties": false,
+      "description": "Question, authority, and task-specific proof boundary.",
+      "properties": {
+        "authority": {
+          "title": "Authority",
+          "type": "string"
+        },
+        "profile": {
+          "$ref": "#/$defs/DossierProfile"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "satisfied_stop_conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Satisfied Stop Conditions",
+          "type": "array"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/ResolvedTarget"
+          },
+          "title": "Targets",
+          "type": "array"
+        },
+        "unsatisfied_stop_conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unsatisfied Stop Conditions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile",
+        "question",
+        "targets",
+        "authority"
+      ],
+      "title": "DossierBoundary",
+      "type": "object"
+    },
+    "DossierBudget": {
+      "additionalProperties": false,
+      "description": "Explicit delivery bounds; no bound redefines proof completeness.",
+      "properties": {
+        "max_content_block_bytes": {
+          "default": 8192,
+          "minimum": 0,
+          "title": "Max Content Block Bytes",
+          "type": "integer"
+        },
+        "max_depth": {
+          "default": 2,
+          "maximum": 32,
+          "minimum": 0,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "max_disclosed_omission_ids": {
+          "default": 8,
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Max Disclosed Omission Ids",
+          "type": "integer"
+        },
+        "max_inline_content_bytes": {
+          "default": 24576,
+          "minimum": 0,
+          "title": "Max Inline Content Bytes",
+          "type": "integer"
+        },
+        "max_items": {
+          "default": 32,
+          "minimum": 0,
+          "title": "Max Items",
+          "type": "integer"
+        },
+        "max_payload_bytes": {
+          "default": 73728,
+          "minimum": 4096,
+          "title": "Max Payload Bytes",
+          "type": "integer"
+        }
+      },
+      "title": "DossierBudget",
+      "type": "object"
+    },
+    "DossierBudgetUse": {
+      "additionalProperties": false,
+      "description": "Disaggregated result cost; payload bytes are measured canonical bytes.",
+      "properties": {
+        "depth": {
+          "$ref": "#/$defs/BudgetCounter"
+        },
+        "inline_content_bytes": {
+          "$ref": "#/$defs/BudgetCounter"
+        },
+        "items": {
+          "$ref": "#/$defs/BudgetCounter"
+        },
+        "payload_bytes": {
+          "$ref": "#/$defs/BudgetCounter"
+        }
+      },
+      "required": [
+        "items",
+        "payload_bytes",
+        "inline_content_bytes",
+        "depth"
+      ],
+      "title": "DossierBudgetUse",
+      "type": "object"
+    },
+    "DossierContent": {
+      "additionalProperties": false,
+      "description": "Deduplicated exact content transmitted separately from semantic roles.",
+      "properties": {
+        "content_class": {
+          "$ref": "#/$defs/ContentClass"
+        },
+        "content_id": {
+          "minLength": 1,
+          "title": "Content Id",
+          "type": "string"
+        },
+        "context_after": {
+          "minimum": 0,
+          "title": "Context After",
+          "type": "integer"
+        },
+        "context_before": {
+          "minimum": 0,
+          "title": "Context Before",
+          "type": "integer"
+        },
+        "digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Digest",
+          "type": "string"
+        },
+        "enclosing_entity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enclosing Entity Id"
+        },
+        "external_locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Locator"
+        },
+        "full_content_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Full Content Digest",
+          "type": "string"
+        },
+        "language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Language"
+        },
+        "media_type": {
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "source_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContentRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_state_id": {
+          "title": "Source State Id",
+          "type": "string"
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Text"
+        },
+        "truncated": {
+          "title": "Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "content_id",
+        "digest",
+        "full_content_digest",
+        "source_state_id",
+        "content_class",
+        "media_type",
+        "context_before",
+        "context_after",
+        "truncated"
+      ],
+      "title": "DossierContent",
+      "type": "object"
+    },
+    "DossierCursor": {
+      "additionalProperties": false,
+      "description": "Self-validating stable continuation bound to one query and source session.",
+      "properties": {
+        "base_dossier_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Base Dossier Digest",
+          "type": "string"
+        },
+        "base_dossier_id": {
+          "minLength": 1,
+          "title": "Base Dossier Id",
+          "type": "string"
+        },
+        "base_request_id": {
+          "minLength": 1,
+          "title": "Base Request Id",
+          "type": "string"
+        },
+        "checksum": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Checksum",
+          "type": "string"
+        },
+        "expansion_kind": {
+          "$ref": "#/$defs/ExpansionKind"
+        },
+        "ordered_after": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Ordered After",
+          "type": "array"
+        },
+        "policy_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Policy Digest",
+          "type": "string"
+        },
+        "query_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Query Digest",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "session_manifest_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Session Manifest Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "base_dossier_id",
+        "base_dossier_digest",
+        "base_request_id",
+        "query_digest",
+        "session_id",
+        "session_manifest_digest",
+        "policy_digest",
+        "expansion_kind",
+        "ordered_after",
+        "checksum"
+      ],
+      "title": "DossierCursor",
+      "type": "object"
+    },
+    "DossierExpansion": {
+      "additionalProperties": false,
+      "description": "One consumer-requested expansion over an immutable base dossier.",
+      "properties": {
+        "action_id": {
+          "minLength": 1,
+          "title": "Action Id",
+          "type": "string"
+        },
+        "base_dossier_id": {
+          "minLength": 1,
+          "title": "Base Dossier Id",
+          "type": "string"
+        },
+        "context_lines": {
+          "default": 0,
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Context Lines",
+          "type": "integer"
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DossierCursor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "depth_increment": {
+          "default": 0,
+          "maximum": 32,
+          "minimum": 0,
+          "title": "Depth Increment",
+          "type": "integer"
+        },
+        "kind": {
+          "$ref": "#/$defs/ExpansionKind"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceRole"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Id"
+        }
+      },
+      "required": [
+        "kind",
+        "base_dossier_id",
+        "action_id"
+      ],
+      "title": "DossierExpansion",
+      "type": "object"
+    },
+    "DossierFilters": {
+      "additionalProperties": false,
+      "description": "Conjunctive restrictions applied without changing source facts.",
+      "properties": {
+        "content_classes": {
+          "items": {
+            "$ref": "#/$defs/ContentClass"
+          },
+          "title": "Content Classes",
+          "type": "array"
+        },
+        "evidence_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Kinds",
+          "type": "array"
+        },
+        "provider_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Ids",
+          "type": "array"
+        },
+        "relationship_categories": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Relationship Categories",
+          "type": "array"
+        },
+        "roles": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRole"
+          },
+          "title": "Roles",
+          "type": "array"
+        },
+        "source_state_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source State Ids",
+          "type": "array"
+        }
+      },
+      "title": "DossierFilters",
+      "type": "object"
+    },
+    "DossierGroup": {
+      "additionalProperties": false,
+      "description": "Stable proof-role grouping in reader order.",
+      "properties": {
+        "group_id": {
+          "minLength": 1,
+          "title": "Group Id",
+          "type": "string"
+        },
+        "item_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Item Ids",
+          "type": "array"
+        },
+        "proof_purpose": {
+          "title": "Proof Purpose",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "role": {
+          "$ref": "#/$defs/EvidenceRole"
+        },
+        "section": {
+          "$ref": "#/$defs/DossierSection"
+        }
+      },
+      "required": [
+        "group_id",
+        "section",
+        "role",
+        "proof_purpose",
+        "required",
+        "item_ids"
+      ],
+      "title": "DossierGroup",
+      "type": "object"
+    },
+    "DossierItem": {
+      "additionalProperties": false,
+      "description": "One role-labelled evidence reference with every independent reason.",
+      "properties": {
+        "conflict_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflict Ids",
+          "type": "array"
+        },
+        "content_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Content Id"
+        },
+        "distance": {
+          "minimum": 0,
+          "title": "Distance",
+          "type": "integer"
+        },
+        "entity_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entity Id"
+        },
+        "evidence_kind": {
+          "minLength": 1,
+          "title": "Evidence Kind",
+          "type": "string"
+        },
+        "item_id": {
+          "minLength": 1,
+          "title": "Item Id",
+          "type": "string"
+        },
+        "locators": {
+          "items": {
+            "$ref": "#/$defs/EvidenceLocator"
+          },
+          "title": "Locators",
+          "type": "array"
+        },
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/DossierObservation"
+          },
+          "title": "Observations",
+          "type": "array"
+        },
+        "provider_run_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Provider Run Ids",
+          "type": "array"
+        },
+        "record_id": {
+          "minLength": 1,
+          "title": "Record Id",
+          "type": "string"
+        },
+        "record_kind": {
+          "minLength": 1,
+          "title": "Record Kind",
+          "type": "string"
+        },
+        "relationship_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Relationship Ids",
+          "type": "array"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "role": {
+          "$ref": "#/$defs/EvidenceRole"
+        },
+        "section": {
+          "$ref": "#/$defs/DossierSection"
+        },
+        "selection_reasons": {
+          "items": {
+            "$ref": "#/$defs/SelectionReason"
+          },
+          "minItems": 1,
+          "title": "Selection Reasons",
+          "type": "array"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        },
+        "unknown_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unknown Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "item_id",
+        "record_id",
+        "record_kind",
+        "role",
+        "section",
+        "evidence_kind",
+        "strength",
+        "selection_reasons",
+        "required",
+        "distance"
+      ],
+      "title": "DossierItem",
+      "type": "object"
+    },
+    "DossierLocator": {
+      "additionalProperties": false,
+      "description": "Structured portable target or evidence locator.",
+      "properties": {
+        "end_column": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Column"
+        },
+        "end_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Line"
+        },
+        "external_identity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Identity"
+        },
+        "heading": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Heading"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "qualified_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Qualified Name"
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revision"
+        },
+        "rule_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Id"
+        },
+        "start_column": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Column"
+        },
+        "start_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Line"
+        }
+      },
+      "title": "DossierLocator",
+      "type": "object"
+    },
+    "DossierObservation": {
+      "additionalProperties": false,
+      "description": "One independent provider observation retained without aggregation.",
+      "properties": {
+        "limitation_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitation Ids",
+          "type": "array"
+        },
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "method_version": {
+          "title": "Method Version",
+          "type": "string"
+        },
+        "observation_id": {
+          "title": "Observation Id",
+          "type": "string"
+        },
+        "provider_run_id": {
+          "title": "Provider Run Id",
+          "type": "string"
+        },
+        "rationale": {
+          "title": "Rationale",
+          "type": "string"
+        },
+        "stance": {
+          "title": "Stance",
+          "type": "string"
+        },
+        "strength": {
+          "$ref": "#/$defs/EvidenceStrength"
+        }
+      },
+      "required": [
+        "observation_id",
+        "provider_run_id",
+        "method",
+        "method_version",
+        "strength",
+        "stance",
+        "rationale"
+      ],
+      "title": "DossierObservation",
+      "type": "object"
+    },
+    "DossierOmission": {
+      "additionalProperties": false,
+      "description": "Typed absence with requiredness and deterministic recovery.",
+      "properties": {
+        "disclosed_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Disclosed Ids",
+          "type": "array"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "omission_id": {
+          "minLength": 1,
+          "title": "Omission Id",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/OmissionReason"
+        },
+        "recovery_action_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Recovery Action Ids",
+          "type": "array"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceRole"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "total_count": {
+          "minimum": 0,
+          "title": "Total Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "omission_id",
+        "reason",
+        "required",
+        "total_count",
+        "message"
+      ],
+      "title": "DossierOmission",
+      "type": "object"
+    },
+    "DossierProfile": {
+      "description": "Lifecycle question whose proof boundary controls dossier selection.",
+      "enum": [
+        "orientation",
+        "design",
+        "audit",
+        "localisation",
+        "implementation",
+        "change_review",
+        "closure"
+      ],
+      "title": "DossierProfile",
+      "type": "string"
+    },
+    "DossierRequest": {
+      "additionalProperties": false,
+      "description": "Normalized, content-addressed dossier query.",
+      "properties": {
+        "artifact_type": {
+          "const": "anatomize.dossier-request",
+          "default": "anatomize.dossier-request",
+          "title": "Artifact Type",
+          "type": "string"
+        },
+        "budget": {
+          "$ref": "#/$defs/DossierBudget"
+        },
+        "direction": {
+          "$ref": "#/$defs/QueryDirection",
+          "default": "both"
+        },
+        "exclude": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude",
+          "type": "array"
+        },
+        "expansion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DossierExpansion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "filters": {
+          "$ref": "#/$defs/DossierFilters"
+        },
+        "include": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Include",
+          "type": "array"
+        },
+        "profile": {
+          "$ref": "#/$defs/DossierProfile"
+        },
+        "question": {
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "request_id": {
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "default": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "session_manifest_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Session Manifest Digest",
+          "type": "string"
+        },
+        "slice_policy": {
+          "$ref": "#/$defs/SourceSlicePolicy"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/$defs/TargetSelector"
+          },
+          "title": "Targets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "request_id",
+        "profile",
+        "question",
+        "session_id",
+        "session_manifest_digest"
+      ],
+      "title": "DossierRequest",
+      "type": "object"
+    },
+    "DossierSection": {
+      "description": "Stable reader order below the separately represented question boundary.",
+      "enum": [
+        "decision_critical",
+        "contradictions_unknowns",
+        "supporting_context"
+      ],
+      "title": "DossierSection",
+      "type": "string"
+    },
+    "DossierStatus": {
+      "description": "Truthful terminal state of one dossier projection.",
+      "enum": [
+        "complete",
+        "partial",
+        "blocked",
+        "failed"
+      ],
+      "title": "DossierStatus",
+      "type": "string"
+    },
+    "EvidenceLocator": {
+      "additionalProperties": false,
+      "description": "Portable evidence location retained in a dossier item.",
+      "properties": {
+        "end_column": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Column"
+        },
+        "end_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Line"
+        },
+        "external_locator": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "External Locator"
+        },
+        "location_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location Id"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "start_column": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Column"
+        },
+        "start_line": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Line"
+        }
+      },
+      "title": "EvidenceLocator",
+      "type": "object"
+    },
+    "EvidenceRole": {
+      "description": "Task-facing purpose of evidence without a quality judgement.",
+      "enum": [
+        "state",
+        "topology",
+        "ownership",
+        "public_surface",
+        "entry_point",
+        "flow",
+        "definition",
+        "declaration",
+        "dependency",
+        "caller",
+        "callee",
+        "reference",
+        "consumer",
+        "contract",
+        "alternative",
+        "decision_context",
+        "diagnostic",
+        "conflict",
+        "unknown",
+        "test",
+        "documentation",
+        "configuration",
+        "data",
+        "workflow",
+        "runtime",
+        "artifact",
+        "change",
+        "validation",
+        "duplicate_candidate",
+        "provenance",
+        "supporting_context"
+      ],
+      "title": "EvidenceRole",
+      "type": "string"
+    },
+    "EvidenceStrength": {
+      "description": "Strength claimed by one observation, never an aggregate score.",
+      "enum": [
+        "exact",
+        "derived",
+        "conservative",
+        "heuristic",
+        "declared",
+        "unknown"
+      ],
+      "title": "EvidenceStrength",
+      "type": "string"
+    },
+    "ExpansionAction": {
+      "additionalProperties": false,
+      "description": "One safe typed action that can derive a new request.",
+      "properties": {
+        "action_id": {
+          "minLength": 1,
+          "title": "Action Id",
+          "type": "string"
+        },
+        "base_dossier_id": {
+          "title": "Base Dossier Id",
+          "type": "string"
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DossierCursor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "kind": {
+          "$ref": "#/$defs/ExpansionKind"
+        },
+        "maximum_incremental_bytes": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum Incremental Bytes"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceRole"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "session_manifest_digest": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "title": "Session Manifest Digest",
+          "type": "string"
+        },
+        "target_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Id"
+        }
+      },
+      "required": [
+        "action_id",
+        "kind",
+        "base_dossier_id",
+        "session_id",
+        "session_manifest_digest"
+      ],
+      "title": "ExpansionAction",
+      "type": "object"
+    },
+    "ExpansionKind": {
+      "description": "Closed expansion algebra shared by every interface.",
+      "enum": [
+        "group",
+        "entity",
+        "relationship",
+        "role",
+        "depth",
+        "adjacent_context",
+        "complete_file",
+        "provider",
+        "omission",
+        "cursor",
+        "history",
+        "validation",
+        "refresh"
+      ],
+      "title": "ExpansionKind",
+      "type": "string"
+    },
+    "OmissionReason": {
+      "description": "Why evidence is absent from this projection.",
+      "enum": [
+        "scope",
+        "unsupported",
+        "policy",
+        "budget",
+        "provider_limitation",
+        "ambiguity",
+        "source_drift",
+        "failure"
+      ],
+      "title": "OmissionReason",
+      "type": "string"
+    },
+    "QueryDirection": {
+      "description": "Direction in which typed evidence relationships are traversed.",
+      "enum": [
+        "inbound",
+        "outbound",
+        "both"
+      ],
+      "title": "QueryDirection",
+      "type": "string"
+    },
+    "ResolvedTarget": {
+      "additionalProperties": false,
+      "description": "Resolution outcome preserved for each requested selector.",
+      "properties": {
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "resolved_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resolved Ids",
+          "type": "array"
+        },
+        "selector": {
+          "$ref": "#/$defs/TargetSelector"
+        },
+        "status": {
+          "$ref": "#/$defs/TargetResolutionStatus"
+        }
+      },
+      "required": [
+        "selector",
+        "status",
+        "message"
+      ],
+      "title": "ResolvedTarget",
+      "type": "object"
+    },
+    "SelectionReason": {
+      "additionalProperties": false,
+      "description": "One independent and inspectable reason an item was selected.",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/SelectionReasonCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "object_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Object Id"
+        },
+        "relationship_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relationship Id"
+        },
+        "subject_id": {
+          "title": "Subject Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "subject_id",
+        "message"
+      ],
+      "title": "SelectionReason",
+      "type": "object"
+    },
+    "SelectionReasonCode": {
+      "description": "Public, compositional selection rules; deliberately not scores.",
+      "enum": [
+        "profile_required",
+        "explicit_include",
+        "exact_target",
+        "exact_relationship",
+        "current_change",
+        "role_match",
+        "structural_fallback",
+        "conservative_candidate",
+        "conflict_surface",
+        "supporting_context"
+      ],
+      "title": "SelectionReasonCode",
+      "type": "string"
+    },
+    "SourceSlicePolicy": {
+      "additionalProperties": false,
+      "description": "Content inclusion policy kept independent from evidence selection.",
+      "properties": {
+        "allowed_content_classes": {
+          "items": {
+            "$ref": "#/$defs/ContentClass"
+          },
+          "title": "Allowed Content Classes",
+          "type": "array"
+        },
+        "context_after": {
+          "default": 3,
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Context After",
+          "type": "integer"
+        },
+        "context_before": {
+          "default": 3,
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Context Before",
+          "type": "integer"
+        },
+        "include_enclosing_structure": {
+          "default": true,
+          "title": "Include Enclosing Structure",
+          "type": "boolean"
+        },
+        "inline_content": {
+          "default": true,
+          "title": "Inline Content",
+          "type": "boolean"
+        }
+      },
+      "title": "SourceSlicePolicy",
+      "type": "object"
+    },
+    "TargetKind": {
+      "description": "Portable target families accepted by the query application layer.",
+      "enum": [
+        "repository",
+        "file",
+        "symbol",
+        "range",
+        "documentation_section",
+        "test",
+        "configuration",
+        "data",
+        "workflow",
+        "artifact",
+        "diagnostic",
+        "duplicate_candidate",
+        "revision",
+        "external_dependency"
+      ],
+      "title": "TargetKind",
+      "type": "string"
+    },
+    "TargetResolutionStatus": {
+      "description": "Result of resolving a target without choosing an ambiguous candidate.",
+      "enum": [
+        "exact",
+        "ambiguous",
+        "unresolved",
+        "unsupported",
+        "conflicting"
+      ],
+      "title": "TargetResolutionStatus",
+      "type": "string"
+    },
+    "TargetSelector": {
+      "additionalProperties": false,
+      "description": "One exact identity or structured locator requested by a consumer.",
+      "properties": {
+        "identity": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Identity"
+        },
+        "kind": {
+          "$ref": "#/$defs/TargetKind"
+        },
+        "locator": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DossierLocator"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "source_state_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source State Id"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "TargetSelector",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "One exact request and its answer, retained together for review and expansion.",
+  "properties": {
+    "artifact_type": {
+      "const": "anatomize.dossier-exchange",
+      "default": "anatomize.dossier-exchange",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "dossier": {
+      "$ref": "#/$defs/Dossier"
+    },
+    "exchange_id": {
+      "minLength": 1,
+      "title": "Exchange Id",
+      "type": "string"
+    },
+    "request": {
+      "$ref": "#/$defs/DossierRequest"
+    },
+    "schema_version": {
+      "const": "1.0.0",
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "exchange_id",
+    "request",
+    "dossier"
+  ],
+  "title": "DossierExchange",
+  "type": "object"
+}

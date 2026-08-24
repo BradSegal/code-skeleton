@@ -1,0 +1,126 @@
+{
+  "artifact_type": "anatomize.lsp-semantic",
+  "schema_version": "1.0.0",
+  "protocol": "lsp",
+  "protocol_version": "3.18",
+  "position_encoding": "utf-16",
+  "tool": {
+    "name": "fixture-language-server",
+    "version": "4.2.0",
+    "executable_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "repository_id": "repository:semantic-fixture",
+  "source_state": {
+    "record_type": "source_state",
+    "state_id": "state:semantic-fixture",
+    "repository_id": "repository:semantic-fixture",
+    "revision": "abc123",
+    "dirty": false,
+    "content_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "file_count": 2
+  },
+  "indexed_content_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "configuration_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "capabilities": ["definitions", "declarations", "references", "calls"],
+  "languages": ["python"],
+  "status": "complete",
+  "documents": [
+    {
+      "path": "src/api.py",
+      "language": "python",
+      "content_digest": "sha256:b7f3d42b83f55cf00608281b3e2a58e6f7e4b6c3e2ffffbe509153e445a7b5ef"
+    },
+    {
+      "path": "src/core.py",
+      "language": "python",
+      "content_digest": "sha256:8882a308673a4f363fdfb804e43c8a93cab8873e4ebedd840330000cae3701da"
+    }
+  ],
+  "symbols": [
+    {
+      "symbol_id": "lsp:python:api.exported",
+      "document_path": "src/api.py",
+      "source_range": {"start": {"line": 0, "column": 28}, "end": {"line": 0, "column": 36}},
+      "language": "python",
+      "symbol_kind": "variable",
+      "name": "exported",
+      "qualified_name": "api.exported",
+      "role": "reexport",
+      "public": true
+    },
+    {
+      "symbol_id": "lsp:python:api.parse:int",
+      "document_path": "src/api.py",
+      "source_range": {"start": {"line": 2, "column": 4}, "end": {"line": 2, "column": 9}},
+      "language": "python",
+      "symbol_kind": "function",
+      "name": "parse",
+      "qualified_name": "api.parse",
+      "role": "overload",
+      "signature": "(value: int) -> int",
+      "public": true
+    },
+    {
+      "symbol_id": "lsp:python:core.caller",
+      "document_path": "src/core.py",
+      "source_range": {"start": {"line": 4, "column": 4}, "end": {"line": 4, "column": 10}},
+      "language": "python",
+      "symbol_kind": "function",
+      "name": "caller",
+      "qualified_name": "core.caller",
+      "role": "definition",
+      "public": true
+    },
+    {
+      "symbol_id": "lsp:python:core.target",
+      "document_path": "src/core.py",
+      "source_range": {"start": {"line": 1, "column": 4}, "end": {"line": 1, "column": 10}},
+      "language": "python",
+      "symbol_kind": "function",
+      "name": "target",
+      "qualified_name": "core.target",
+      "role": "definition",
+      "public": true
+    }
+  ],
+  "occurrences": [
+    {
+      "occurrence_id": "occurrence:api-target-reference",
+      "document_path": "src/api.py",
+      "source_range": {"start": {"line": 0, "column": 18}, "end": {"line": 0, "column": 24}},
+      "relationship": "reference",
+      "source_symbol_id": "lsp:python:api.exported",
+      "target_symbol_id": "lsp:python:core.target"
+    },
+    {
+      "occurrence_id": "occurrence:caller-external-call",
+      "document_path": "src/core.py",
+      "source_range": {"start": {"line": 5, "column": 22}, "end": {"line": 5, "column": 25}},
+      "relationship": "call",
+      "source_symbol_id": "lsp:python:core.caller",
+      "external_target": {
+        "identity_scheme": "python-package-symbol",
+        "external_identity": "pypi:example-runtime#ext",
+        "entity_kind": "function",
+        "display_name": "example_runtime.ext"
+      }
+    },
+    {
+      "occurrence_id": "occurrence:caller-missing-call",
+      "document_path": "src/core.py",
+      "source_range": {"start": {"line": 6, "column": 11}, "end": {"line": 6, "column": 18}},
+      "relationship": "call",
+      "source_symbol_id": "lsp:python:core.caller",
+      "target_symbol_id": "lsp:python:missing"
+    },
+    {
+      "occurrence_id": "occurrence:caller-target-call",
+      "document_path": "src/core.py",
+      "source_range": {"start": {"line": 5, "column": 11}, "end": {"line": 5, "column": 17}},
+      "relationship": "call",
+      "source_symbol_id": "lsp:python:core.caller",
+      "target_symbol_id": "lsp:python:core.target"
+    }
+  ],
+  "issues": []
+}

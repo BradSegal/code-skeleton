@@ -1,0 +1,8 @@
+{
+  "R": {"Version": "4.5.1", "Repositories": [{"Name": "CRAN", "URL": "https://cloud.r-project.org"}]},
+  "Packages": {
+    "arrow": {"Package": "arrow", "Version": "18.1.0", "Source": "Repository", "Repository": "CRAN", "Hash": "arrow-lock-hash"},
+    "jsonlite": {"Package": "jsonlite", "Version": "1.8.9", "Source": "Repository", "Repository": "CRAN", "Hash": "jsonlite-lock-hash"},
+    "trialtools": {"Package": "trialtools", "Version": "0.1.0", "Source": "Local"}
+  }
+}

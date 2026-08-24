@@ -1,0 +1,8 @@
+{
+  "artifact_type": "anatomize.evidence",
+  "schema_version": "1.0.0",
+  "producer": {
+    "name": "anatomize",
+    "version": "fixture"
+  }
+}

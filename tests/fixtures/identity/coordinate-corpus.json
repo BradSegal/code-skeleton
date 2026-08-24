@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "source": "Aé𝄞Z\nβx\n",
+  "cases": [
+    {
+      "case_id": "zero-based-utf8",
+      "convention": {"line_base": 0, "column_base": 0, "column_encoding": "utf8_byte"},
+      "provider_range": {"start": {"line": 0, "column": 1}, "end": {"line": 0, "column": 7}},
+      "canonical_range": {"start": {"line": 1, "column": 1}, "end": {"line": 1, "column": 3}}
+    },
+    {
+      "case_id": "one-based-utf16-and-columns",
+      "convention": {"line_base": 1, "column_base": 1, "column_encoding": "utf16_code_unit"},
+      "provider_range": {"start": {"line": 1, "column": 2}, "end": {"line": 1, "column": 5}},
+      "canonical_range": {"start": {"line": 1, "column": 1}, "end": {"line": 1, "column": 3}}
+    },
+    {
+      "case_id": "raw-byte-column",
+      "convention": {"line_base": 1, "column_base": 0, "column_encoding": "byte"},
+      "provider_range": {"start": {"line": 1, "column": 3}, "end": {"line": 1, "column": 8}},
+      "canonical_range": {"start": {"line": 1, "column": 2}, "end": {"line": 1, "column": 4}}
+    },
+    {
+      "case_id": "multi-line-half-open",
+      "convention": {"line_base": 0, "column_base": 0, "column_encoding": "utf8_byte"},
+      "provider_range": {"start": {"line": 0, "column": 7}, "end": {"line": 1, "column": 2}},
+      "canonical_range": {"start": {"line": 1, "column": 3}, "end": {"line": 2, "column": 1}}
+    },
+    {
+      "case_id": "trailing-empty-line",
+      "convention": {"line_base": 1, "column_base": 0, "column_encoding": "unicode_codepoint"},
+      "provider_range": {"start": {"line": 3, "column": 0}, "end": {"line": 3, "column": 0}},
+      "canonical_range": {"start": {"line": 3, "column": 0}, "end": {"line": 3, "column": 0}}
+    }
+  ]
+}
