@@ -15,6 +15,8 @@ All notable changes to this project are documented in this file.
 - Preserve repeated Python parameterizations and repeated R calls as distinct
   source evidence, isolate R failures per file, and report stable path-scoped
   parser degradations.
+- Preserve bounded, actionable MCP tool and resource errors with MCP SDK 2.1's
+  explicit anticipated-error channel.
 
 ## 2.0.1 - 2026-08-24
 
