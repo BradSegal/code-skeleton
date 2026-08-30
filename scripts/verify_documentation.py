@@ -98,6 +98,7 @@ def verify(root: Path) -> dict[str, Any]:
         )
         required_operations = {
             "capabilities",
+            "source_state",
             "start",
             "dossier",
             "expand",
@@ -118,6 +119,21 @@ def verify(root: Path) -> dict[str, Any]:
 
         before = artifacts / "before.json"
         store = artifacts / "store"
+        source_state = json.loads(
+            _run(
+                [
+                    *command,
+                    "state",
+                    str(repository),
+                    "--repository-id",
+                    "repository:documentation",
+                    "--format",
+                    "json",
+                ],
+                cwd=foreign,
+                env=isolated_env,
+            ).stdout
+        )
         _run(
             [
                 *command,
@@ -135,6 +151,9 @@ def verify(root: Path) -> dict[str, Any]:
             cwd=foreign,
             env=isolated_env,
         )
+        session_state = _artifact(before)["manifest"]["source_states"][0]["source_state"]
+        if source_state != session_state:
+            raise ValueError("Lightweight source state differs from the documented review session")
         orientation = artifacts / "orientation.json"
         _run(
             [

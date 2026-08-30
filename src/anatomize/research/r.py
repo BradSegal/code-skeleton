@@ -184,25 +184,32 @@ def extract_r_repository(
         file_digests[path] = sha256_digest(source.encode())
         if not path.casefold().endswith((".r", ".rmd", ".qmd")):
             continue
-        if _is_test_path(path):
-            tests.extend(
+        try:
+            source_tests = (
                 extract_r_test_intent(
                     source,
                     repository_id=repository_id,
                     source_state_id=source_state_id,
                     path=path,
                 ).intents
+                if _is_test_path(path)
+                else []
             )
-        source_functions, source_calls = _parse_r_source(
-            source,
-            path=path,
-            source_state_id=source_state_id,
-            package_name=package_name,
-            explicit_exports=explicit_exports,
-        )
+            source_functions, source_calls = _parse_r_source(
+                source,
+                path=path,
+                source_state_id=source_state_id,
+                package_name=package_name,
+                explicit_exports=explicit_exports,
+            )
+            source_data = _parse_data_declarations(source, path=path)
+        except ValueError as error:
+            limitations.add(f"{path}: source inventory unavailable ({_stable_parse_error(error)})")
+            continue
+        tests.extend(source_tests)
         functions.extend(source_functions)
         calls.extend(source_calls)
-        data.extend(_parse_data_declarations(source, path=path))
+        data.extend(source_data)
         dynamic = sorted(set(re.findall(r"\b(get|assign|do\.call|eval|parse|substitute)\s*\(", source)))
         if dynamic:
             limitations.add(
@@ -224,11 +231,13 @@ def extract_r_repository(
         source_state_id=source_state_id,
         package=package,
         files=file_digests,
-        functions=sorted(functions, key=lambda item: item.function_id),
-        calls=sorted(calls, key=lambda item: item.call_id),
+        functions=sorted({item.function_id: item for item in functions}.values(), key=lambda item: item.function_id),
+        calls=sorted({item.call_id: item for item in calls}.values(), key=lambda item: item.call_id),
         namespace=namespace,
-        tests=sorted(tests, key=lambda item: item.intent_id),
-        data_declarations=sorted(data, key=lambda item: item.declaration_id),
+        tests=sorted({item.intent_id: item for item in tests}.values(), key=lambda item: item.intent_id),
+        data_declarations=sorted(
+            {item.declaration_id: item for item in data}.values(), key=lambda item: item.declaration_id
+        ),
         limitations=sorted(limitations),
     )
 
@@ -353,7 +362,7 @@ def _parse_r_source(
         )
         functions.append(function)
         for offset, body_line in enumerate(lines[index : end + 1], index + 1):
-            for target in _r_call_names(body_line):
+            for target in sorted(set(_r_call_names(body_line))):
                 if target in {"function", "if", "for", "while", "return"}:
                     continue
                 call_locator = RSourceLocator(path=path, start_line=offset, end_line=offset)
@@ -422,6 +431,13 @@ def _parse_r_source(
                 )
             )
     return functions, calls
+
+
+def _stable_parse_error(error: ValueError) -> str:
+    message = str(error).strip()
+    if message and "\n" not in message:
+        return message[:240]
+    return f"{type(error).__name__}: invalid extracted source evidence"
 
 
 def _parse_data_declarations(source: str, *, path: str) -> list[RDataDeclaration]:

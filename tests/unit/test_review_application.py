@@ -131,6 +131,19 @@ def test_session_and_dossier_are_deterministic_content_free_and_round_trip(tmp_p
     assert exchange.dossier.expansions
 
 
+def test_lightweight_source_state_matches_session_and_changes_with_source(tmp_path: Path) -> None:
+    root = _repository(tmp_path / "repository")
+    application = ReviewApplication()
+
+    current = application.source_state(root, repository_id="repository:review-test")
+    session = application.start(root, repository_id="repository:review-test")
+
+    assert current == session.manifest.source_states[0].source_state
+
+    (root / "src" / "maths.py").write_text("def total(values: list[int]) -> int:\n    return 0\n", encoding="utf-8")
+    assert application.source_state(root, repository_id="repository:review-test").state_id != current.state_id
+
+
 def test_source_state_and_builtin_inventory_cover_research_files(tmp_path: Path) -> None:
     root = _repository(tmp_path / "repository")
     (root / "R").mkdir()
@@ -181,6 +194,30 @@ def test_source_state_and_builtin_inventory_cover_research_files(tmp_path: Path)
         for item in evidence.entities
     )
     assert any(getattr(item, "range_kind", "") == "notebook_code_cell" for item in evidence.entities)
+
+
+def test_builtin_inventory_degrades_invalid_test_at_path_scope(tmp_path: Path) -> None:
+    root = _repository(tmp_path / "repository")
+    (root / "tests" / "test_invalid.py").write_text("def test_invalid(:\n", encoding="utf-8")
+
+    bundle = ReviewApplication().start(root, repository_id="repository:invalid-test")
+    evidence = DossierContext.from_bundle(bundle).evidence
+    limitation = next(
+        item
+        for artifact in evidence
+        for item in artifact.limitations
+        if item.code == "python_test_parse"
+    )
+    omission = next(
+        item
+        for artifact in evidence
+        for item in artifact.omissions
+        if item.reason == limitation.summary
+    )
+
+    assert limitation.summary == "python_test_syntax_invalid: Cannot parse test source at line 1"
+    assert omission.scope_type == "path"
+    assert omission.scope_id == "tests/test_invalid.py"
 
 
 def test_explicit_provider_artifact_is_bound_without_discovery_or_execution(tmp_path: Path) -> None:

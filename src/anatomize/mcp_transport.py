@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
-from collections.abc import Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
 
@@ -349,6 +350,7 @@ def create_mcp_server(service: MCPReviewService) -> Any:
     """Create the optional official-SDK server without importing MCP in baseline use."""
     try:
         from mcp.server import MCPServer
+        from mcp.server.mcpserver.exceptions import ResourceError, ToolError
         from mcp.types import ToolAnnotations
     except ImportError as error:
         raise MCPReviewError(
@@ -375,14 +377,27 @@ def create_mcp_server(service: MCPReviewService) -> Any:
         openWorldHint=False,
     )
 
+    async def public_call(
+        operation: Callable[[], _ResultT | Awaitable[_ResultT]],
+        error_type: type[Exception],
+    ) -> _ResultT:
+        """Classify anticipated review failures for the MCP SDK's public error channel."""
+        try:
+            result = operation()
+            if inspect.isawaitable(result):
+                return await cast(Awaitable[_ResultT], result)
+            return result
+        except MCPReviewError as error:
+            raise error_type(str(error)) from error
+
     @server.tool(
         name="anatomize_capabilities",
         description="Negotiate exact review operations, schemas, limits, and authority boundaries.",
         annotations=annotations,
         structured_output=True,
     )
-    def capabilities() -> dict[str, Any]:
-        return service.capabilities()
+    async def capabilities() -> dict[str, Any]:
+        return await public_call(service.capabilities, ToolError)
 
     @server.tool(
         name="anatomize_session",
@@ -391,7 +406,7 @@ def create_mcp_server(service: MCPReviewService) -> Any:
         structured_output=True,
     )
     async def session() -> dict[str, Any]:
-        return await service.session()
+        return await public_call(service.session, ToolError)
 
     @server.tool(
         name="anatomize_refresh",
@@ -400,7 +415,7 @@ def create_mcp_server(service: MCPReviewService) -> Any:
         structured_output=True,
     )
     async def refresh() -> dict[str, Any]:
-        return await service.refresh()
+        return await public_call(service.refresh, ToolError)
 
     @server.tool(
         name="anatomize_dossier",
@@ -419,16 +434,19 @@ def create_mcp_server(service: MCPReviewService) -> Any:
         budget: dict[str, Any] | None = None,
         slice_policy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return await service.dossier(
-            profile=profile,
-            targets=targets,
-            question=question,
-            direction=direction,
-            filters=filters,
-            include=include,
-            exclude=exclude,
-            budget=budget,
-            slice_policy=slice_policy,
+        return await public_call(
+            lambda: service.dossier(
+                profile=profile,
+                targets=targets,
+                question=question,
+                direction=direction,
+                filters=filters,
+                include=include,
+                exclude=exclude,
+                budget=budget,
+                slice_policy=slice_policy,
+            ),
+            ToolError,
         )
 
     @server.tool(
@@ -443,11 +461,14 @@ def create_mcp_server(service: MCPReviewService) -> Any:
         budget: dict[str, Any] | None = None,
         slice_policy: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return await service.expand(
-            exchange=exchange,
-            action_id=action_id,
-            budget=budget,
-            slice_policy=slice_policy,
+        return await public_call(
+            lambda: service.expand(
+                exchange=exchange,
+                action_id=action_id,
+                budget=budget,
+                slice_policy=slice_policy,
+            ),
+            ToolError,
         )
 
     @server.tool(
@@ -457,7 +478,7 @@ def create_mcp_server(service: MCPReviewService) -> Any:
         structured_output=True,
     )
     async def check(artifact: dict[str, Any]) -> dict[str, Any]:
-        return await service.check(artifact=artifact)
+        return await public_call(lambda: service.check(artifact=artifact), ToolError)
 
     @server.resource(
         "anatomize://capabilities",
@@ -465,8 +486,11 @@ def create_mcp_server(service: MCPReviewService) -> Any:
         description="Versioned review and transport contract.",
         mime_type="application/json",
     )
-    def capabilities_resource() -> str:
-        return json.dumps(service.capabilities(), ensure_ascii=False, sort_keys=True)
+    async def capabilities_resource() -> str:
+        return await public_call(
+            lambda: json.dumps(service.capabilities(), ensure_ascii=False, sort_keys=True),
+            ResourceError,
+        )
 
     @server.resource(
         "anatomize://session",
@@ -475,7 +499,10 @@ def create_mcp_server(service: MCPReviewService) -> Any:
         mime_type="application/json",
     )
     async def session_resource() -> str:
-        return json.dumps(await service.session(), ensure_ascii=False, sort_keys=True)
+        async def render() -> str:
+            return json.dumps(await service.session(), ensure_ascii=False, sort_keys=True)
+
+        return await public_call(render, ResourceError)
 
     return server
 

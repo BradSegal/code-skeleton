@@ -37,6 +37,7 @@ python -m ruff check .
 python -m mypy --strict src tests
 python -m pytest
 python scripts/benchmark_dossiers.py
+python scripts/benchmark_review_start.py --root .
 python scripts/evaluate_agentic_workflows.py
 python scripts/verify_documentation.py --root .
 python scripts/generate_documentation.py --check

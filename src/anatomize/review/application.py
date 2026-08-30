@@ -42,6 +42,7 @@ from anatomize.evidence import (
     RepositoryEvidence,
     RuntimeEntity,
     RuntimeObservation,
+    SourceStateRecord,
     SymbolEntity,
     TestEntity,
     WorkflowEntity,
@@ -49,6 +50,7 @@ from anatomize.evidence import (
     merge_repository_evidence,
 )
 from anatomize.index import RepositoryIndex, build_repository_index
+from anatomize.index.repository import capture_repository_source_state
 from anatomize.lifecycle import (
     DECISION_OVERLAY_SCHEMA_VERSION,
     CandidateGranularity,
@@ -146,6 +148,19 @@ class ReviewApplication:
     def capabilities(self) -> dict[str, Any]:
         """Advertise the exact application operations and interaction contract."""
         return review_capabilities()
+
+    def source_state(self, root: Path, *, repository_id: str | None = None) -> SourceStateRecord:
+        """Fingerprint one exact source state without building semantic evidence."""
+        resolved = root.resolve()
+        state = capture_repository_source_state(resolved)
+        return SourceStateRecord(
+            state_id=f"state:{state.fact_digest}",
+            repository_id=repository_id or f"repository:{resolved.name}",
+            revision=state.commit,
+            dirty=state.dirty,
+            content_digest=state.fact_digest,
+            file_count=state.fact_file_count,
+        )
 
     def start(
         self,
@@ -659,6 +674,7 @@ def review_capabilities() -> dict[str, Any]:
         "application_api_version": "1.0.0",
         "operations": [
             "capabilities",
+            "source_state",
             "start",
             "dossier",
             "expand",

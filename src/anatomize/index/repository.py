@@ -86,6 +86,17 @@ def build_repository_index(
     return _assemble_repository_index(root, roots=roots)
 
 
+def capture_repository_source_state(root: Path) -> SourceState:
+    """Fingerprint the exact review source without building semantic facts."""
+    resolved = root.resolve()
+    if not resolved.exists() or not resolved.is_dir():
+        raise ValueError(f"Repository root must be an existing directory: {resolved}")
+    files = _repository_files(resolved)
+    python_files = [path for path in files if _is_python_source(path)]
+    file_records = _fact_file_records(resolved, files)
+    return _source_state(resolved, python_files, file_records, _fact_providers())
+
+
 def _assemble_repository_index(
     root: Path,
     *,
