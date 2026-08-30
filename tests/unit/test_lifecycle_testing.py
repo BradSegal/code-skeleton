@@ -63,6 +63,24 @@ def test_answer(value, fixture_db, snapshot):
     assert intent.generated_cases == ["pytest.mark.parametrize"]
 
 
+def test_repeated_python_parameterization_is_one_preserved_fact() -> None:
+    source = '''@pytest.mark.parametrize("value", [1, 2])
+@pytest.mark.parametrize("value", [1, 2])
+def test_answer(value):
+    assert value > 0
+'''
+
+    intent = extract_python_test_intent(
+        source,
+        repository_id="repository:fixture",
+        source_state_id="state:after",
+        path="tests/test_repeated.py",
+    ).intents[0]
+
+    assert intent.parameterizations == ["pytest.mark.parametrize"]
+    assert intent.generated_cases == ["pytest.mark.parametrize"]
+
+
 def test_r_testthat_intent_is_distinct_and_bounded() -> None:
     source = '''test_that("answer varies by input", {
   local_options(list(warn = 2))

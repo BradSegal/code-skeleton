@@ -35,6 +35,36 @@ def review_capabilities_command(
         _review_failure(error)
 
 
+@review_app.command("state")
+def review_state_command(
+    root: Annotated[
+        Path,
+        typer.Argument(help="Repository root to fingerprint without building semantic evidence."),
+    ] = Path("."),
+    repository_id: Annotated[
+        str | None,
+        typer.Option("--repository-id", help="Stable repository identity represented by the result."),
+    ] = None,
+    format: Annotated[
+        str,
+        typer.Option("--format", "-f", help="Output format: text, json, or markdown."),
+    ] = "json",
+    width: Annotated[int, typer.Option("--width", help="Plain-text wrap width (minimum 40).")] = 88,
+) -> None:
+    """Return the exact source identity used by review sessions."""
+    try:
+        from anatomize.review import ReviewApplication
+
+        _emit_review(
+            ReviewApplication().source_state(root, repository_id=repository_id),
+            format=format,
+            output=None,
+            width=width,
+        )
+    except (ValueError, OSError) as error:
+        _review_failure(error)
+
+
 @review_app.command("start")
 def review_start_command(
     root: Annotated[

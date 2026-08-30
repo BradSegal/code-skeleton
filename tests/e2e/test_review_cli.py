@@ -99,6 +99,7 @@ def test_novice_expert_automation_and_lifecycle_cli_journeys(tmp_path: Path) -> 
 
     help_result = _invoke(runner, ["review", "--help"])
     for command in (
+        "state",
         "start",
         "dossier",
         "expand",
@@ -114,6 +115,12 @@ def test_novice_expert_automation_and_lifecycle_cli_journeys(tmp_path: Path) -> 
         "recover",
     ):
         assert command in help_result.output
+
+    state = json.loads(
+        _invoke(runner, ["review", "state", str(root), "--repository-id", "repository:e2e"]).output
+    )
+    assert state["repository_id"] == "repository:e2e"
+    assert state["state_id"].startswith("state:")
 
     _invoke(
         runner,

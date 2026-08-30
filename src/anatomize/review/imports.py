@@ -13,6 +13,7 @@ from enum import Enum
 from pathlib import Path
 
 from anatomize._artifacts import content_id, sha256_digest
+from anatomize._errors import AnatomizeError
 from anatomize._paths import resolve_inside
 from anatomize.diagnostics import build_sarif_binding, normalize_sarif_log, parse_sarif_log
 from anatomize.evidence import (
@@ -164,7 +165,7 @@ def normalize_builtin_source_facts(
                 path=path,
             )
         except ValueError as error:
-            limitations.append(("python_test_parse", path, str(error)))
+            limitations.append(("python_test_parse", path, _stable_error_summary(error)))
             continue
         for intent in python_artifact.intents:
             test = TestEntity(
@@ -281,9 +282,11 @@ def normalize_builtin_source_facts(
                     data_kind=f"r:{declaration.operation}",
                 )
                 builder.entities[data_entity.entity_id] = data_entity
-            limitations.extend(("r_inventory", "repository", item) for item in r_artifact.limitations)
+            for item in r_artifact.limitations:
+                scope = next((path for path in r_sources if item.startswith(f"{path}:")), "repository")
+                limitations.append(("r_inventory", scope, item))
         except ValueError as error:
-            limitations.append(("r_inventory_parse", "repository", str(error)))
+            limitations.append(("r_inventory_parse", "repository", _stable_error_summary(error)))
 
     for path in sorted(selected):
         suffix = Path(path).suffix.casefold()
@@ -308,7 +311,7 @@ def normalize_builtin_source_facts(
                 )
             )
         except (OSError, ValueError) as error:
-            limitations.append(("notebook_parse", path, str(error)))
+            limitations.append(("notebook_parse", path, _stable_error_summary(error)))
             continue
         for cell in notebook.cells:
             location_id = _notebook_location(builder, file, cell)
@@ -435,6 +438,15 @@ def normalize_builtin_source_facts(
         status=ProviderRunStatus.PARTIAL if limitations else ProviderRunStatus.COMPLETE,
         payload=builder.build_payload([completeness]),
     )
+
+
+def _stable_error_summary(error: OSError | ValueError) -> str:
+    if isinstance(error, AnatomizeError):
+        return f"{error.code}: {error}"
+    message = str(error).strip()
+    if message and "\n" not in message:
+        return message[:240]
+    return f"{type(error).__name__}: invalid source evidence"
 
 
 def _source_location(

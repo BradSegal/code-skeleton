@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## 2.1.0 - 2026-08-30
+
+### Added
+
+- Add `review state` and `ReviewApplication.source_state()` so consumers can
+  compare retained review evidence with the current repository without
+  rebuilding semantic facts.
+
+### Fixed
+
+- Preserve repeated Python parameterizations and repeated R calls as distinct
+  source evidence, isolate R failures per file, and report stable path-scoped
+  parser degradations.
+
 ## 2.0.1 - 2026-08-24
 
 ### Changed

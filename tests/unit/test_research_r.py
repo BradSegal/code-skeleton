@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import pytest
+
 from anatomize.evidence import ProviderRunStatus
 from anatomize.research import extract_r_repository
-from anatomize.research.r import RFunctionKind, RNamespaceKind
+from anatomize.research import r as r_inventory
+from anatomize.research.r import RCall, RFunction, RFunctionKind, RNamespaceKind
 from anatomize.semantic import (
     LspSemanticArtifact,
     SemanticCapability,
@@ -95,6 +98,55 @@ def test_r_and_python_language_identities_do_not_collide() -> None:
 
     assert r_identity != python_identity
     assert artifact.functions[0].qualified_name == "pkg::answer"
+
+
+def test_repeated_same_line_r_calls_are_one_relationship_fact() -> None:
+    artifact = extract_r_repository(
+        {"R/core.R": "answer <- function(x) helper(helper(x))\n"},
+        repository_id="pkg",
+        source_state_id="state:r",
+    )
+
+    helper_calls = [item for item in artifact.calls if item.target == "helper"]
+    assert len(helper_calls) == 1
+    assert artifact.functions[0].calls == ["helper"]
+
+
+def test_r_file_failure_is_isolated_and_valid_files_remain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original = r_inventory._parse_r_source
+
+    def fail_one_source(
+        source: str,
+        *,
+        path: str,
+        source_state_id: str,
+        package_name: str,
+        explicit_exports: set[str],
+    ) -> tuple[list[RFunction], list[RCall]]:
+        if path == "R/bad.R":
+            raise ValueError("fixture parse failure")
+        return original(
+            source,
+            path=path,
+            source_state_id=source_state_id,
+            package_name=package_name,
+            explicit_exports=explicit_exports,
+        )
+
+    monkeypatch.setattr(r_inventory, "_parse_r_source", fail_one_source)
+    artifact = extract_r_repository(
+        {
+            "R/good.R": "answer <- function() 42\n",
+            "R/bad.R": "broken <- function() 0\n",
+        },
+        repository_id="pkg",
+        source_state_id="state:r",
+    )
+
+    assert [item.name for item in artifact.functions] == ["answer"]
+    assert "R/bad.R: source inventory unavailable (fixture parse failure)" in artifact.limitations
 
 
 def test_captured_r_lsp_uses_common_semantic_provider_contract() -> None:

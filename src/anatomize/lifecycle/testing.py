@@ -180,12 +180,12 @@ def extract_python_test_intent(
                 and item.context_expr.args
             }
         )
-        parameterizations = sorted(value for value in decorators if "parametrize" in value)
+        parameterizations = sorted({value for value in decorators if "parametrize" in value})
         marks = sorted(value for value in decorators if "mark" in value and "parametrize" not in value)
         targets = sorted(value for value in calls if not value.startswith(("pytest.", "unittest.")))
         snapshots = sorted(value for value in calls if "snapshot" in value.casefold())
         setup = sorted(value for value in calls if value.casefold().startswith(("setup", "teardown")))
-        generated = parameterizations
+        generated = list(parameterizations)
         values = {
             "source_state_id": source_state_id,
             "framework": "pytest" if any(value.startswith("pytest") for value in [*decorators, *calls]) else "python",

@@ -22,6 +22,7 @@ source, budgets, and output paths are explicit arguments.
 | Command | Stable purpose |
 | --- | --- |
 | `review capabilities` | Advertise operations, profiles, target kinds, schemas, pagination, output, and provider policy. |
+| `review state ROOT` | Fingerprint the exact review source without building semantic evidence. |
 | `review start ROOT` | Build one exact portable session from baseline facts and explicitly supplied artifacts. |
 | `review dossier SESSION [TARGETS...]` | Build a bounded role-labelled answer for one lifecycle profile and question. |
 | `review expand SESSION EXCHANGE ACTION` | Apply one source-bound advertised expansion without mutating the base exchange. |
@@ -36,7 +37,7 @@ source, budgets, and output paths are explicit arguments.
 | `review check ARTIFACT` | Validate schema, identity, digest, state, and references without mutation. |
 | `review recover STORE` | Render the current or immediately prior valid immutable session generation. |
 
-Machine operation names are `capabilities`, `start`, `dossier`, `expand`,
+Machine operation names are `capabilities`, `source_state`, `start`, `dossier`, `expand`,
 `similarity`, `change`, `consolidation`, `decision_overlay`,
 `evaluate_overlay`, `implementation_intent`, `verify`, `check`, `export`, and
 `recover`.
